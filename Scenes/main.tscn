@@ -1,0 +1,63 @@
+[gd_scene load_steps=10 format=3 uid="uid://baffxghij0727"]
+
+[ext_resource type="Script" path="res://Scripts/Test/main.gd" id="2_mbvjg"]
+[ext_resource type="PackedScene" uid="uid://s55uierlj6bl" path="res://Scenes/marching_cubes.tscn" id="3_1prx4"]
+[ext_resource type="PackedScene" uid="uid://dpsi06xinqbpn" path="res://Scenes/Player.tscn" id="3_hf4c8"]
+
+[sub_resource type="WorldBoundaryShape3D" id="WorldBoundaryShape3D_rox61"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_xhe17"]
+albedo_color = Color(0, 0.6, 0.196078, 1)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_87i16"]
+material = SubResource("StandardMaterial3D_xhe17")
+size = Vector2(20, 20)
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ba63i"]
+
+[sub_resource type="Sky" id="Sky_c2pbe"]
+sky_material = SubResource("ProceduralSkyMaterial_ba63i")
+
+[sub_resource type="Environment" id="Environment_llovf"]
+background_mode = 2
+background_color = Color(0.211765, 0.278431, 0.858824, 1)
+sky = SubResource("Sky_c2pbe")
+ambient_light_color = Color(1, 1, 1, 1)
+
+[node name="Main" type="Node3D" node_paths=PackedStringArray("pivot", "fatbergs")]
+script = ExtResource("2_mbvjg")
+pivot = NodePath("Node3D")
+fatbergs = [NodePath("Fatberg Test")]
+
+[node name="Node3D" type="Node3D" parent="."]
+visible = false
+
+[node name="Camera3D" type="Camera3D" parent="Node3D"]
+transform = Transform3D(1, 0, 0, 0, 0.97299, 0.230848, 0, -0.230848, 0.97299, 0, 6.27636, 10.9418)
+visible = false
+
+[node name="Timer" type="Timer" parent="."]
+wait_time = 2.0
+autostart = true
+
+[node name="Fatberg Test" parent="." instance=ExtResource("3_1prx4")]
+size = 4
+
+[node name="StaticBody3D" type="StaticBody3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D"]
+shape = SubResource("WorldBoundaryShape3D_rox61")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="StaticBody3D"]
+mesh = SubResource("PlaneMesh_87i16")
+
+[node name="Player" parent="." instance=ExtResource("3_hf4c8")]
+transform = Transform3D(-0.879698, 0, -0.475532, 0, 1, 0, 0.475532, 0, -0.879698, 0, 1.02053, -3.3)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.612373, 0.612373, -0.5, -0.707107, 0.707107, 0, 0.353553, 0.353553, 0.866025, 0, 6, 0)
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_llovf")
+
+[connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]

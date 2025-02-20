@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3 uid="uid://8osb8u546pap"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_eonb5"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8ubsr"]
+transparency = 1
+albedo_color = Color(0.427451, 0.431373, 1, 0.396078)
+
+[node name="Collision Test" type="MeshInstance3D"]
+mesh = SubResource("SphereMesh_eonb5")
+surface_material_override/0 = SubResource("StandardMaterial3D_8ubsr")

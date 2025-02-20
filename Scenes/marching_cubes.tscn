@@ -1,0 +1,39 @@
+[gd_scene load_steps=6 format=3 uid="uid://s55uierlj6bl"]
+
+[ext_resource type="Script" path="res://Scripts/Tools/marching_cubes.gd" id="1_t48mc"]
+
+[sub_resource type="ImmediateMesh" id="ImmediateMesh_8c7kb"]
+
+[sub_resource type="ImmediateMesh" id="ImmediateMesh_1k0qx"]
+
+[sub_resource type="ImmediateMesh" id="ImmediateMesh_l0m3l"]
+
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_pfmsg"]
+points = PackedVector3Array(1.66663, 1.75, 1.66663, 1.66663, 1.66663, 1.75, 1.75, 1.66663, 1.66663, 1.66663, 1.75, 0.166536, 0.166536, 1.75, 1.66663, 1.66663, 0.166536, 1.75, 0.166536, 1.66663, 1.75, 1.75, 1.66663, 0.166536, 1.75, 0.166536, 1.66663, 1.66663, 1.66663, 0.0833333, 0.166536, 1.75, 0.166536, 0.0833333, 1.66663, 1.66663, 1.66663, 0.0833333, 1.66663, 0.166536, 0.166536, 1.75, 1.75, 0.166536, 0.166536, 1.66663, 0.166536, 0.0833333, 0.166536, 1.66663, 0.0833333, 0.0833333, 1.66663, 0.166536, 0.0833333, 0.166536, 1.66663, 1.66663, 0.0833333, 0.166536, 0.166536, 0.0833333, 1.66663, 0.166536, 0.166536, 0.0833333, 0.0833333, 0.166536, 0.166536, 0.166536, 0.0833333, 0.166536)
+
+[node name="MarchingCubes" type="StaticBody3D" node_paths=PackedStringArray("points_node", "cubes_node", "triangles_node", "collision_node")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0483217, -0.0469198, 0.00471306)
+collision_layer = 2
+collision_mask = 4
+script = ExtResource("1_t48mc")
+size = 2
+resolution = 6
+points_node = NodePath("Centers Mesh")
+cubes_node = NodePath("Cubes Mesh")
+triangles_node = NodePath("Triangles Mesh")
+collision_node = NodePath("CollisionShape3D")
+
+[node name="Centers Mesh" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("ImmediateMesh_8c7kb")
+
+[node name="Cubes Mesh" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("ImmediateMesh_1k0qx")
+
+[node name="Triangles Mesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("ImmediateMesh_l0m3l")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+visible = false
+shape = SubResource("ConvexPolygonShape3D_pfmsg")
