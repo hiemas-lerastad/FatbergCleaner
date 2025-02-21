@@ -1,0 +1,21 @@
+[gd_scene load_steps=2 format=3 uid="uid://qdpxjpvtlgbr"]
+
+[ext_resource type="Script" path="res://Scripts/Tools/chunk.gd" id="1_fe7wt"]
+
+[node name="Chunk" type="StaticBody3D" node_paths=PackedStringArray("mesh_node", "low_collision", "high_collision")]
+collision_layer = 2
+collision_mask = 8
+script = ExtResource("1_fe7wt")
+mesh_node = NodePath("Mesh")
+low_collision = NodePath("Low Collision Shape")
+high_collision = NodePath("High Collision/Hight Collision Shape")
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+
+[node name="Low Collision Shape" type="CollisionShape3D" parent="."]
+
+[node name="High Collision" type="StaticBody3D" parent="."]
+collision_layer = 4
+collision_mask = 0
+
+[node name="Hight Collision Shape" type="CollisionShape3D" parent="High Collision"]

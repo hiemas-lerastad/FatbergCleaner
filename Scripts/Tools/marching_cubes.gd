@@ -2,9 +2,11 @@
 class_name MarchingCubeInstance;
 extends Node3D;
 
-#var seed: int;
-
 @export_category('Settings')
+@export var regenerate: bool:
+	set(value):
+		generate();
+
 @export_range(0, 50) var size: int = 1:
 	set(value):
 		size = value;
@@ -16,11 +18,6 @@ extends Node3D;
 		resolution = value;
 		init_matrix()
 		generate();
-		
-#@export var randomize: bool:
-	#set(value):
-		#randomize_seed();
-		#generate();
 		
 @export_range(-1, 1, 0.1) var cutoff: float = 0.0:
 	set(value):
@@ -49,21 +46,50 @@ extends Node3D;
 @export var points_node: MeshInstance3D;
 @export var cubes_node: MeshInstance3D;
 @export var triangles_node: MeshInstance3D;
-@export var collision_node: CollisionShape3D;
+@export var low_collision_node: CollisionShape3D;
+@export var high_collision_node: CollisionShape3D;
 
 @export_category("Assets")
 @export var texture: CompressedTexture2D;
+@export var chunk_scene: PackedScene = preload("res://Scenes/chunk.tscn");
+@export var test_material: StandardMaterial3D;
 		
 var center_mesh: Node;
 var cube_mesh: Node;
 var triangle_mesh: Node;
 var matrix: Array3D;
+var chunks: Array3D;
 		
 func _ready() -> void:
-	#randomize_seed();
 	init_matrix();
 	generate();
-#
+
+## This initialises and fills the matrix object (an Array3D) with its default values
+## currently this is a cube shape
+func init_matrix() -> void:
+	var matrix_size = size * resolution;
+	matrix = Array3D.new();
+	matrix.initialise_size(matrix_size, matrix_size, matrix_size);
+	
+	for x in range(matrix_size):
+		for y in range(matrix_size):
+			for z in range(matrix_size):
+				# Plane
+				#if y < float(matrix_size) / 2 or y == 0:
+					#matrix.set_value(x, y, z, -1)
+				#else:
+					#matrix.set_value(x, y, z, 1)
+				
+				# Cube
+				if x == 0 or z == 0 or y == 0 or x == matrix_size -1 or y == matrix_size -1 or z == matrix_size -1:
+					matrix.set_value(x, y, z, -1)
+				else:
+					matrix.set_value(x, y, z, 1)
+
+## This reads the matrix object and based on the values it calculates three meshes
+## a points mesh, to display the matrix values
+## a cubes mesh, to show the boundry for each marching cube
+## a triangles mesh, the final mesh within the cubes, made of triangles
 func generate() -> void:
 	if not matrix:
 		init_matrix()
@@ -72,12 +98,12 @@ func generate() -> void:
 	var mesh_points = ImmediateMesh.new();
 	mesh_points.surface_begin(Mesh.PRIMITIVE_POINTS);
 	
-	var mesh_cubes = ImmediateMesh.new();
+	var mesh_cubes: ImmediateMesh = ImmediateMesh.new();
 	mesh_cubes.surface_begin(Mesh.PRIMITIVE_LINES);
 	
-	var mesh_triangles = ImmediateMesh.new();
+	var mesh_triangles: ImmediateMesh = ImmediateMesh.new();
 	mesh_triangles.surface_begin(Mesh.PRIMITIVE_TRIANGLES);
-	var valid_surface = false;
+	var valid_surface: bool = false;
 	
 	for x in range(0, matrix_size):
 		for y in range(0, matrix_size):
@@ -131,8 +157,8 @@ func generate() -> void:
 						var b2: int = Constants.cornerIndexBFromEdge[triangles[index+2]];
 
 						var vertex1: Vector3 = _interpolate(cube_vertices[a0], cube_values[a0], cube_vertices[b0], cube_values[b0]);
-						var vertex2: Vector3 = _interpolate(cube_vertices[a1], cube_values[a1], cube_vertices[b1], cube_values[b1]);
-						var vertex3: Vector3 = _interpolate(cube_vertices[a2], cube_values[a2], cube_vertices[b2], cube_values[b2]);
+						var vertex3: Vector3 = _interpolate(cube_vertices[a1], cube_values[a1], cube_vertices[b1], cube_values[b1]);
+						var vertex2: Vector3 = _interpolate(cube_vertices[a2], cube_values[a2], cube_vertices[b2], cube_values[b2]);
 						
 						var vector_a: Vector3 = Vector3(
 							vertex3.x - vertex1.x,
@@ -150,8 +176,6 @@ func generate() -> void:
 							vector_a.z * vector_b.x - vector_a.x * vector_b.z,
 							vector_a.x * vector_b.y - vector_a.y * vector_b.x,
 						)
-						
-						#var vector_normal = _get_triangle_normal(vertex1, vertex2, vertex3)
 
 						mesh_triangles.surface_set_color(color);
 						mesh_triangles.surface_set_normal(vector_normal);
@@ -160,27 +184,25 @@ func generate() -> void:
 							mesh_triangles.surface_add_vertex(vertex1);
 							mesh_triangles.surface_add_vertex(vertex2);
 							mesh_triangles.surface_add_vertex(vertex3);
-				
-				
+
 	mesh_points.surface_end();
 	mesh_cubes.surface_end();
 	if valid_surface:
 		mesh_triangles.surface_end();
 	
-	var material_points = StandardMaterial3D.new();
+	var material_points: StandardMaterial3D = StandardMaterial3D.new();
 	material_points.vertex_color_use_as_albedo = true;
 	material_points.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED;
 	material_points.use_point_size = true;
 	material_points.point_size = 8;
 	
-	var material_cubes = StandardMaterial3D.new();
+	var material_cubes: StandardMaterial3D = StandardMaterial3D.new();
 	material_cubes.vertex_color_use_as_albedo = true;
 	material_cubes.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED;
 	
-	var material_triangles = StandardMaterial3D.new();
+	#var material_triangles: StandardMaterial3D = test_material;
+	var material_triangles: StandardMaterial3D = StandardMaterial3D.new();
 	material_triangles.vertex_color_use_as_albedo = true;
-	material_triangles.cull_mode = BaseMaterial3D.CULL_FRONT;
-	#material_triangles.albedo_texture = texture;
 	
 	mesh_points.surface_set_material(0, material_points);
 	if points_node:
@@ -191,39 +213,23 @@ func generate() -> void:
 	if cubes_node:
 		cubes_node.mesh = mesh_cubes;
 		cubes_node.visible = show_grid;
-	
+
 	if valid_surface:
 		mesh_triangles.surface_set_material(0, material_triangles);
 		if triangles_node:
 			triangles_node.visible = show_mesh;
 			triangles_node.mesh = mesh_triangles;
-			if triangles_node.mesh.create_convex_shape():
-				collision_node.set_shape(triangles_node.mesh.create_convex_shape());
 
-func init_matrix() -> void:
-	var matrix_size = size * resolution;
-	matrix = Array3D.new();
-	matrix.initialise_size(matrix_size, matrix_size, matrix_size);
-	
-	for x in range(matrix_size):
-		for y in range(matrix_size):
-			for z in range(matrix_size):
-				# Plane
-				#if y < float(matrix_size) / 2 or y == 0:
-					#matrix.set_value(x, y, z, -1)
-				#else:
-					#matrix.set_value(x, y, z, 1)
-				
-				# Cube
-				if x == 0 or z == 0 or y == 0 or x == matrix_size -1 or y == matrix_size -1 or z == matrix_size -1:
-					matrix.set_value(x, y, z, -1)
-				else:
-					matrix.set_value(x, y, z, 1)
+			if mesh_triangles.create_trimesh_shape():
+				low_collision_node.shape = null;
+				low_collision_node.set_shape(mesh_triangles.create_convex_shape());
+				high_collision_node.set_shape(mesh_triangles.create_trimesh_shape());
+	else:
+		if triangles_node:
+			triangles_node.visible = false;
+			low_collision_node.disabled = true;
+			high_collision_node.disabled = true;
 
-#func randomize_seed() -> void:
-	#seed = randi();
-	#
-	
 func _create_cube_vertices(point_position: Vector3) -> Array[Vector3]:
 	var offset: float = 1.0 / float(resolution)
 
@@ -331,9 +337,26 @@ func _validate_cube(values: Array[float]) -> bool:
 	return valid;
 		
 func carve_around_point(global_point: Vector3, radius: float) -> void:
-	var point: Vector3 = (global_point - position) * resolution;
-	print(point)
-	_get_nearby_points(point, radius);
+	var local_point: Vector3 = (global_point - position) * resolution;
+	var points: Array[Vector3] = _get_points_in_sphere(local_point, radius);
+
+	for point in points:
+		var distance: float = point.distance_to(local_point);
+		var distance_normalised: float = 0 - (1 - (distance / radius));
+		matrix.set_value(point.x, point.y, point.z, distance_normalised);
+
+	generate();
+
+func _get_points_in_sphere(center_point: Vector3, radius: float) -> Array[Vector3]:
+	var points: Array[Vector3] = [];
 	
-func _get_nearby_points(point: Vector3, radius: float) -> void:
-	pass;
+	for x_index in range(center_point.x - radius, center_point.x + radius):
+		for y_index in range(center_point.y - radius, center_point.y + radius):
+			for z_index in range(center_point.z - radius, center_point.z + radius):
+				if x_index >= matrix.x_max or y_index >= matrix.y_max or z_index >= matrix.z_max or x_index < 0 or y_index < 0 or z_index < 0:
+					continue;
+
+				if pow((x_index) - center_point.x, 2) + pow((y_index) - center_point.y, 2) + pow((z_index) - center_point.z, 2) < pow(radius, 2):
+					points.append(Vector3(int(x_index), int(y_index), int(z_index)));
+
+	return points;

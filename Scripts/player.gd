@@ -47,14 +47,9 @@ func _input(event):
 		rotate_y(-event.relative.x * mouse_sensitivity)
 		camera.rotate_x(-event.relative.y * mouse_sensitivity)
 		camera.rotation.x = clampf(camera.rotation.x, -deg_to_rad(70), deg_to_rad(70))
-		
+		#
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		interact_cast.force_raycast_update()
 		if interact_cast.is_colliding():
-			#print(interact_cast.get_collider())
-			#print(interact_cast.get_collision_point())
-			#var orb: MeshInstance3D = collision_test_scene.instantiate();
-			#Globals.level.add_child(orb);
-			#orb.global_position = interact_cast.get_collision_point();
-			var collider: MarchingCubeInstance = interact_cast.get_collider()
+			var collider: StaticBody3D = interact_cast.get_collider()
 			collider.carve_around_point((interact_cast.get_collision_point()), 4.0);

@@ -24,10 +24,8 @@ background_color = Color(0.211765, 0.278431, 0.858824, 1)
 sky = SubResource("Sky_c2pbe")
 ambient_light_color = Color(1, 1, 1, 1)
 
-[node name="Main" type="Node3D" node_paths=PackedStringArray("pivot", "fatbergs")]
+[node name="Main" type="Node3D"]
 script = ExtResource("2_mbvjg")
-pivot = NodePath("Node3D")
-fatbergs = [NodePath("Fatberg Test")]
 
 [node name="Node3D" type="Node3D" parent="."]
 visible = false
@@ -39,9 +37,6 @@ visible = false
 [node name="Timer" type="Timer" parent="."]
 wait_time = 2.0
 autostart = true
-
-[node name="Fatberg Test" parent="." instance=ExtResource("3_1prx4")]
-size = 4
 
 [node name="StaticBody3D" type="StaticBody3D" parent="."]
 
@@ -59,5 +54,21 @@ transform = Transform3D(0.612373, 0.612373, -0.5, -0.707107, 0.707107, 0, 0.3535
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_llovf")
+
+[node name="MarchingCubes2" parent="." instance=ExtResource("3_1prx4")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.83923, -0.0501905, 0.00942612)
+resolution = 8
+
+[node name="MarchingCubes" parent="." instance=ExtResource("3_1prx4")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.351678, -0.0469198, 0.00471306)
+resolution = 8
+
+[node name="MarchingCubes3" parent="." instance=ExtResource("3_1prx4")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.83923, -0.0501905, -1.59057)
+resolution = 8
+
+[node name="MarchingCubes4" parent="." instance=ExtResource("3_1prx4")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.351678, -0.0469198, -1.59529)
+resolution = 8
 
 [connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]

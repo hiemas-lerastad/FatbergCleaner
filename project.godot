@@ -63,5 +63,6 @@ interact_click={
 [layer_names]
 
 3d_physics/layer_1="World"
-3d_physics/layer_2="Destructable"
-3d_physics/layer_3="Player"
+3d_physics/layer_2="Destructable Low"
+3d_physics/layer_3="Destuctable High"
+3d_physics/layer_4="Player"
