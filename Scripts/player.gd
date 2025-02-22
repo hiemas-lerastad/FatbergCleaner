@@ -52,4 +52,4 @@ func _input(event):
 		interact_cast.force_raycast_update()
 		if interact_cast.is_colliding():
 			var collider: StaticBody3D = interact_cast.get_collider()
-			collider.get_parent().parent.carve_around_point((interact_cast.get_collision_point()), 1.0);
+			collider.get_parent().parent.carve_around_point((interact_cast.get_collision_point()), 4.0);

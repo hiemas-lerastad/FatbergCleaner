@@ -56,4 +56,5 @@ shape = SubResource("WorldBoundaryShape3D_rox61")
 mesh = SubResource("PlaneMesh_87i16")
 
 [node name="MarchingCubes" parent="." instance=ExtResource("3_rssgk")]
+size = 8
 resolution = 10

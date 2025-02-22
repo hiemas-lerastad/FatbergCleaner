@@ -288,16 +288,11 @@ func _generate_chunks(affected_chunks: Array[Vector3]) -> void:
 		chunk_mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLES);
 		var valid_chunk: bool = false;
 
-		for x in range(chunk.x * chunk_size, chunk.x * chunk_size + chunk_size):
-			for y in range(chunk.x * chunk_size, chunk.x * chunk_size + chunk_size):
-				for z in range(chunk.x * chunk_size, chunk.x * chunk_size + chunk_size):
+		for x in range(chunk.x * chunk_size, (chunk.x * chunk_size) + chunk_size):
+			for y in range(chunk.y * chunk_size,(chunk.y * chunk_size) + chunk_size):
+				for z in range(chunk.z * chunk_size, (chunk.z * chunk_size) + chunk_size):
+					var point: Vector3 = Vector3(float(x) / float(resolution), float(y) / float(resolution), float(z) / float(resolution));
 
-		#for x in range(0, matrix_size):
-			#for y in range(0, matrix_size):
-				#for z in range(0, matrix_size):
-					#if _get_chunk_index(x, y, z) == chunk:
-					var point: Vector3 = Vector3(float(x), float(y), float(z));
-					print(point)
 					if x < matrix_size - 1 and y < matrix_size - 1 and z < matrix_size - 1:
 						var cube_vertices: Array[Vector3] = _create_cube_vertices(point);
 						var cube_values: Array[float] = _get_cube_values(matrix, Vector3(int(x), int(y), int(z)));
