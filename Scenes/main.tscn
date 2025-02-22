@@ -48,7 +48,7 @@ environment = SubResource("Environment_llovf")
 [node name="Level" type="Node" parent="."]
 
 [node name="Fatberg" parent="Level" instance=ExtResource("3_rssgk")]
-size = 8
+size = 6
 resolution = 8
 
 [node name="Floor" type="StaticBody3D" parent="Level"]
