@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://qdpxjpvtlgbr"]
 
-[ext_resource type="Script" path="res://Scripts/Tools/chunk.gd" id="1_fe7wt"]
+[ext_resource type="Script" path="res://Scripts/Fatberg/chunk.gd" id="1_fe7wt"]
 
 [node name="Chunk" type="StaticBody3D" node_paths=PackedStringArray("mesh_node", "low_collision", "high_collision")]
 collision_layer = 2

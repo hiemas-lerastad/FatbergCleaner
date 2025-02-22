@@ -1,17 +1,8 @@
 [gd_scene load_steps=10 format=3 uid="uid://baffxghij0727"]
 
 [ext_resource type="Script" path="res://Scripts/Test/main.gd" id="2_mbvjg"]
-[ext_resource type="PackedScene" uid="uid://s55uierlj6bl" path="res://Scenes/marching_cubes.tscn" id="3_1prx4"]
 [ext_resource type="PackedScene" uid="uid://dpsi06xinqbpn" path="res://Scenes/Player.tscn" id="3_hf4c8"]
-
-[sub_resource type="WorldBoundaryShape3D" id="WorldBoundaryShape3D_rox61"]
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_xhe17"]
-albedo_color = Color(0, 0.6, 0.196078, 1)
-
-[sub_resource type="PlaneMesh" id="PlaneMesh_87i16"]
-material = SubResource("StandardMaterial3D_xhe17")
-size = Vector2(20, 20)
+[ext_resource type="PackedScene" uid="uid://brbkfaajf5qdy" path="res://Scenes/marching_cubes_chunks.tscn" id="3_rssgk"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ba63i"]
 
@@ -24,6 +15,15 @@ background_color = Color(0.211765, 0.278431, 0.858824, 1)
 sky = SubResource("Sky_c2pbe")
 ambient_light_color = Color(1, 1, 1, 1)
 
+[sub_resource type="WorldBoundaryShape3D" id="WorldBoundaryShape3D_rox61"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_xhe17"]
+albedo_color = Color(0, 0.6, 0.196078, 1)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_87i16"]
+material = SubResource("StandardMaterial3D_xhe17")
+size = Vector2(20, 20)
+
 [node name="Main" type="Node3D"]
 script = ExtResource("2_mbvjg")
 
@@ -34,41 +34,26 @@ visible = false
 transform = Transform3D(1, 0, 0, 0, 0.97299, 0.230848, 0, -0.230848, 0.97299, 0, 6.27636, 10.9418)
 visible = false
 
-[node name="Timer" type="Timer" parent="."]
-wait_time = 2.0
-autostart = true
-
-[node name="StaticBody3D" type="StaticBody3D" parent="."]
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D"]
-shape = SubResource("WorldBoundaryShape3D_rox61")
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="StaticBody3D"]
-mesh = SubResource("PlaneMesh_87i16")
-
 [node name="Player" parent="." instance=ExtResource("3_hf4c8")]
 transform = Transform3D(-0.879698, 0, -0.475532, 0, 1, 0, 0.475532, 0, -0.879698, 0, 1.02053, -3.3)
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.612373, 0.612373, -0.5, -0.707107, 0.707107, 0, 0.353553, 0.353553, 0.866025, 0, 6, 0)
+[node name="Environment" type="Node" parent="."]
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="Environment"]
+transform = Transform3D(0.612373, 0.612373, -0.499999, -0.707107, 0.707107, 0, 0.353553, 0.353553, 0.866026, 0, 6, 0)
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="Environment"]
 environment = SubResource("Environment_llovf")
 
-[node name="MarchingCubes2" parent="." instance=ExtResource("3_1prx4")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.83923, -0.0501905, 0.00942612)
-resolution = 8
+[node name="Level" type="Node" parent="."]
 
-[node name="MarchingCubes" parent="." instance=ExtResource("3_1prx4")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.351678, -0.0469198, 0.00471306)
-resolution = 8
+[node name="Floor" type="StaticBody3D" parent="Level"]
 
-[node name="MarchingCubes3" parent="." instance=ExtResource("3_1prx4")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.83923, -0.0501905, -1.59057)
-resolution = 8
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Level/Floor"]
+shape = SubResource("WorldBoundaryShape3D_rox61")
 
-[node name="MarchingCubes4" parent="." instance=ExtResource("3_1prx4")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.351678, -0.0469198, -1.59529)
-resolution = 8
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Level/Floor"]
+mesh = SubResource("PlaneMesh_87i16")
 
-[connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]
+[node name="MarchingCubes" parent="." instance=ExtResource("3_rssgk")]
+resolution = 10

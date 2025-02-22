@@ -4,4 +4,4 @@ extends Node
 @export var mesh_node: MeshInstance3D;
 @export var low_collision: CollisionShape3D;
 @export var high_collision: CollisionShape3D;
-@export var parent: MarchingCubeInstance2;
+@export var parent: MarchingCubesChunksInstance;

@@ -1,15 +1,11 @@
 @tool
-class_name MarchingCubeInstance2;
+class_name MarchingCubesChunksInstance;
 extends Node3D;
-
-#var seed: int;
 
 @export_category('Settings')
 @export var regenerate: bool:
 	set(value):
-		pass;
-		#randomize_seed();
-		#generate();
+		_generate();
 
 @export_range(0, 50) var size: int = 1:
 	set(value):
@@ -17,15 +13,16 @@ extends Node3D;
 		#init_matrix()
 		#generate();
 		
+@export_range(0, 50) var chunk_size: int = 1:
+	set(value):
+		chunk_size = value;
+		#init_matrix()
+		#generate();
+		
 @export_range(1, 10, 1) var resolution: int = 1:
 	set(value):
 		resolution = value;
 		#init_matrix()
-		#generate();
-		
-#@export var randomize: bool:
-	#set(value):
-		#randomize_seed();
 		#generate();
 		
 @export_range(-1, 1, 0.1) var cutoff: float = 0.0:
@@ -55,325 +52,33 @@ extends Node3D;
 @export var points_node: MeshInstance3D;
 @export var cubes_node: MeshInstance3D;
 @export var triangles_node: MeshInstance3D;
-@export var collision_node: CollisionShape3D;
+@export var low_collision_node: CollisionShape3D;
 @export var high_collision_node: CollisionShape3D;
 @export var chunk_container: Node3D;
 
 @export_category("Assets")
 @export var texture: CompressedTexture2D;
-@export var chunk_scene: PackedScene;
+@export var chunk_scene: PackedScene = preload("res://Scenes/chunk.tscn");
+@export var test_material: StandardMaterial3D;
 		
 var center_mesh: Node;
 var cube_mesh: Node;
 var triangle_mesh: Node;
 var matrix: Array3D;
 var chunks: Array3D;
-var chunks_nodes: Array3D;
 		
 func _ready() -> void:
-	chunk_container = $"Chunk Container";
-	#randomize_seed();
 	init_matrix();
-	generate();
+	_generate();
 
-func generate() -> void:
-	if not matrix:
-		init_matrix()
-
-	for item in chunk_container.get_children():
-		item.queue_free();
-	
-	var matrix_size = size * resolution;
-	var mesh_points = ImmediateMesh.new();
-	mesh_points.surface_begin(Mesh.PRIMITIVE_POINTS);
-	
-	var mesh_cubes: ImmediateMesh = ImmediateMesh.new();
-	mesh_cubes.surface_begin(Mesh.PRIMITIVE_LINES);
-	
-	var mesh_triangles: ImmediateMesh = ImmediateMesh.new();
-	mesh_triangles.surface_begin(Mesh.PRIMITIVE_TRIANGLES);
-	var valid_surface: bool = false;
-	
-	var chunk_meshes: Array3D = Array3D.new();
-	chunk_meshes.initialise_size(size, size, size)
-	chunk_meshes.fill(null);
-	var valid_chunks: Array3D = Array3D.new();
-	valid_chunks.initialise_size(size, size, size)
-	valid_chunks.fill(false);
-	
-	for x in range(0, matrix_size):
-		for y in range(0, matrix_size):
-			for z in range(0, matrix_size):
-				var chunk_x = x / resolution;
-				var chunk_y = y / resolution;
-				var chunk_z = z / resolution;
-#
-				if not chunk_meshes.get_value(chunk_x, chunk_y, chunk_z):
-					chunk_meshes.set_value(chunk_x, chunk_y, chunk_z, ImmediateMesh.new());
-					chunk_meshes.get_value(chunk_x, chunk_y, chunk_z).surface_begin(Mesh.PRIMITIVE_TRIANGLES)
-
-				var point: Vector3 = Vector3(float(x) / float(resolution), float(y) / float(resolution), float(z) / float(resolution));
-				var point_value: float = matrix.get_value(x, y, z);
-				
-				var point_color: Color = Color(
-					float(point_value),
-					float(point_value),
-					float(point_value)
-				);
-				
-				mesh_points.surface_set_color(point_color);
-				mesh_points.surface_add_vertex(point);
-
-				if x < matrix_size - 1 and y < matrix_size - 1 and z < matrix_size - 1:
-					var cube_vertices: Array[Vector3] = _create_cube_vertices(point);
-					var cube_values: Array[float] = _get_cube_values(matrix, Vector3(int(x), int(y), int(z)));
-
-					if _validate_cube(cube_values):
-						_add_cube_vertices(mesh_cubes, cube_vertices);
-
-					var lookup_index : int = _get_lookup_index(cube_values);
-				
-					var triangles: Array = Constants.marching_triangles[lookup_index];
-					
-					var color: Color = Color(
-						float(point.x + size) / float(size * 2), 
-						float(point.y + size) / float(size * 2), 
-						float(point.z + size) / float(size * 2)
-					);
-
-					for index in range(0, triangles.size(), 3):
-						var point_1: int = triangles[index];
-						if point_1 == -1: continue;
-						
-						var point_2: int = triangles[index + 1];
-						if point_2 == -1: continue;
-						
-						var point_3: int = triangles[index + 2];
-						if point_3 == -1: continue;
-						
-						var a0: int = Constants.cornerIndexAFromEdge[triangles[index]];
-						var b0: int = Constants.cornerIndexBFromEdge[triangles[index]];
-
-						var a1: int = Constants.cornerIndexAFromEdge[triangles[index+1]];
-						var b1: int = Constants.cornerIndexBFromEdge[triangles[index+1]];
-
-						var a2: int = Constants.cornerIndexAFromEdge[triangles[index+2]];
-						var b2: int = Constants.cornerIndexBFromEdge[triangles[index+2]];
-
-						var vertex1: Vector3 = _interpolate(cube_vertices[a0], cube_values[a0], cube_vertices[b0], cube_values[b0]);
-						var vertex3: Vector3 = _interpolate(cube_vertices[a1], cube_values[a1], cube_vertices[b1], cube_values[b1]);
-						var vertex2: Vector3 = _interpolate(cube_vertices[a2], cube_values[a2], cube_vertices[b2], cube_values[b2]);
-						
-						var vector_a: Vector3 = Vector3(
-							vertex3.x - vertex1.x,
-							vertex3.y - vertex1.y,
-							vertex3.z - vertex1.z,
-						)
-						var vector_b: Vector3 = Vector3(
-							vertex2.x - vertex1.x,
-							vertex2.y - vertex1.y,
-							vertex2.z - vertex1.z,
-						)
-
-						var vector_normal: Vector3 = Vector3(
-							vector_a.y * vector_b.z - vector_a.z * vector_b.y,
-							vector_a.z * vector_b.x - vector_a.x * vector_b.z,
-							vector_a.x * vector_b.y - vector_a.y * vector_b.x,
-						)
-
-						#var vector_normal = _get_triangle_normal(vertex1, vertex2, vertex3)
-
-						var chunk_index: int = chunk_meshes.get_index_from_coord(chunk_x, chunk_y, chunk_z);
-						chunk_meshes.get_value(chunk_x, chunk_y, chunk_z).surface_set_color(color);
-						chunk_meshes.get_value(chunk_x, chunk_y, chunk_z).surface_set_normal(vector_normal);
-						if vertex1 and vertex2 and vertex3:
-							valid_chunks.set_value(chunk_x, chunk_y, chunk_z, true);
-							chunk_meshes.get_value(chunk_x, chunk_y, chunk_z).surface_add_vertex(vertex1);
-							chunk_meshes.get_value(chunk_x, chunk_y, chunk_z).surface_add_vertex(vertex2);
-							chunk_meshes.get_value(chunk_x, chunk_y, chunk_z).surface_add_vertex(vertex3);
-						
-						#mesh_triangles.surface_set_color(color);
-						#mesh_triangles.surface_set_normal(vector_normal);
-						#if vertex1 and vertex2 and vertex3:
-							#valid_surface = true;
-							#mesh_triangles.surface_add_vertex(vertex1);
-							#mesh_triangles.surface_add_vertex(vertex2);
-							#mesh_triangles.surface_add_vertex(vertex3);
-				
-				
-	mesh_points.surface_end();
-	mesh_cubes.surface_end();
-	if valid_surface:
-		mesh_triangles.surface_end();
-#
-	for index in chunk_meshes.size():
-		if valid_chunks.values[index]:
-			chunk_meshes.values[index].surface_end();
-	
-	var material_points = StandardMaterial3D.new();
-	material_points.vertex_color_use_as_albedo = true;
-	material_points.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED;
-	material_points.use_point_size = true;
-	material_points.point_size = 8;
-	
-	var material_cubes = StandardMaterial3D.new();
-	material_cubes.vertex_color_use_as_albedo = true;
-	material_cubes.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED;
-	
-	var material_triangles = StandardMaterial3D.new();
-	material_triangles.vertex_color_use_as_albedo = true;
-	#material_triangles.cull_mode = BaseMaterial3D.CULL_FRONT;
-	#material_triangles.albedo_texture = texture;
-	
-	mesh_points.surface_set_material(0, material_points);
-	if points_node:
-		points_node.mesh = mesh_points;
-		points_node.visible = show_points;
-		
-	mesh_cubes.surface_set_material(0, material_cubes);
-	if cubes_node:
-		cubes_node.mesh = mesh_cubes;
-		cubes_node.visible = show_grid;
-	
-	for index in range(0, chunk_meshes.size()):
-		var chunk: Chunk = chunk_scene.instantiate();
-		if chunk_meshes.values[index].create_trimesh_shape():
-			chunk_meshes.values[index].surface_set_material(0, material_triangles);
-			chunk.mesh_node.mesh = chunk_meshes.values[index]
-			chunk.low_collision.set_shape(chunk_meshes.values[index].create_convex_shape());
-			chunk.high_collision.set_shape(chunk_meshes.values[index].create_trimesh_shape());
-			chunk.parent = self;
-			chunks_nodes.set_value_index(index, chunk);
-			chunk_container.add_child(chunk);
-	#
-	#if valid_surface:
-		#mesh_triangles.surface_set_material(0, material_triangles);
-		#if triangles_node:
-			#triangles_node.visible = show_mesh;
-			#triangles_node.mesh = mesh_triangles;
-#
-			#if mesh_triangles.create_trimesh_shape():
-				##collision_node.shape = null;
-				#collision_node.set_shape(mesh_triangles.create_convex_shape());
-				#high_collision_node.set_shape(mesh_triangles.create_trimesh_shape());
-	#else:
-		#if triangles_node:
-			#triangles_node.visible = false;
-			#collision_node.disabled = true;
-			#high_collision_node.disabled = true;
-
-func update_chunks(chunk_indexes: Array[Vector3]) -> void:
-	var chunk_meshes: Array3D = Array3D.new();
-	chunk_meshes.values.resize(chunk_indexes.size());
-	chunk_meshes.fill(null);
-	var matrix_size = size * resolution;
-	var valid_chunks: Array3D = Array3D.new();
-	valid_chunks.values.resize(chunk_indexes.size());
-	valid_chunks.fill(false);
-
-	for chunk_index in chunk_indexes:
-		if chunks_nodes.get_value(chunk_index.x, chunk_index.y, chunk_index.z):
-			chunks_nodes.get_value(chunk_index.x, chunk_index.y, chunk_index.z).queue_free();
-			chunks_nodes.set_value(chunk_index.x, chunk_index.y, chunk_index.z, null);
-		for x in range(chunk_index.x * resolution, (chunk_index.x * resolution) + resolution):
-			for y in range(chunk_index.y * resolution, (chunk_index.x * resolution) + resolution):
-				for z in range(chunk_index.z * resolution, (chunk_index.x * resolution) + resolution):
-					if x < matrix_size - 1 and y < matrix_size - 1 and z < matrix_size - 1:
-						var point: Vector3 = Vector3(float(x) / float(resolution), float(y) / float(resolution), float(z) / float(resolution));
-						var cube_vertices: Array[Vector3] = _create_cube_vertices(point);
-						var cube_values: Array[float] = _get_cube_values(matrix, Vector3(int(x), int(y), int(z)));
-
-						var lookup_index : int = _get_lookup_index(cube_values);
-					
-						var triangles: Array = Constants.marching_triangles[lookup_index];
-						
-						var color: Color = Color(
-							float(point.x + size) / float(size * 2), 
-							float(point.y + size) / float(size * 2), 
-							float(point.z + size) / float(size * 2)
-						);
-
-						for index in range(0, triangles.size(), 3):
-							var point_1: int = triangles[index];
-							if point_1 == -1: continue;
-							
-							var point_2: int = triangles[index + 1];
-							if point_2 == -1: continue;
-							
-							var point_3: int = triangles[index + 2];
-							if point_3 == -1: continue;
-							
-							var a0: int = Constants.cornerIndexAFromEdge[triangles[index]];
-							var b0: int = Constants.cornerIndexBFromEdge[triangles[index]];
-
-							var a1: int = Constants.cornerIndexAFromEdge[triangles[index+1]];
-							var b1: int = Constants.cornerIndexBFromEdge[triangles[index+1]];
-
-							var a2: int = Constants.cornerIndexAFromEdge[triangles[index+2]];
-							var b2: int = Constants.cornerIndexBFromEdge[triangles[index+2]];
-
-							var vertex1: Vector3 = _interpolate(cube_vertices[a0], cube_values[a0], cube_vertices[b0], cube_values[b0]);
-							var vertex3: Vector3 = _interpolate(cube_vertices[a1], cube_values[a1], cube_vertices[b1], cube_values[b1]);
-							var vertex2: Vector3 = _interpolate(cube_vertices[a2], cube_values[a2], cube_vertices[b2], cube_values[b2]);
-							
-							var vector_a: Vector3 = Vector3(
-								vertex3.x - vertex1.x,
-								vertex3.y - vertex1.y,
-								vertex3.z - vertex1.z,
-							)
-							var vector_b: Vector3 = Vector3(
-								vertex2.x - vertex1.x,
-								vertex2.y - vertex1.y,
-								vertex2.z - vertex1.z,
-							)
-
-							var vector_normal: Vector3 = Vector3(
-								vector_a.y * vector_b.z - vector_a.z * vector_b.y,
-								vector_a.z * vector_b.x - vector_a.x * vector_b.z,
-								vector_a.x * vector_b.y - vector_a.y * vector_b.x,
-							)
-
-							#var vector_normal = _get_triangle_normal(vertex1, vertex2, vertex3)
-							if not chunk_meshes.get_value(chunk_index.x, chunk_index.y, chunk_index.z):
-								chunk_meshes.set_value(chunk_index.x, chunk_index.y, chunk_index.z, ImmediateMesh.new());
-								chunk_meshes.get_value(chunk_index.x, chunk_index.y, chunk_index.z).surface_begin(Mesh.PRIMITIVE_TRIANGLES)
-							#var new_chunk_index: int = chunk_meshes.get_index_from_coord(chunk_index.x, chunk_index.y, chunk_index.z);
-							chunk_meshes.get_value(chunk_index.x, chunk_index.y, chunk_index.z).surface_set_color(color);
-							chunk_meshes.get_value(chunk_index.x, chunk_index.y, chunk_index.z).surface_set_normal(vector_normal);
-							if vertex1 and vertex2 and vertex3:
-								valid_chunks.set_value(chunk_index.x, chunk_index.y, chunk_index.z, true);
-								chunk_meshes.get_value(chunk_index.x, chunk_index.y, chunk_index.z).surface_add_vertex(vertex1);
-								chunk_meshes.get_value(chunk_index.x, chunk_index.y, chunk_index.z).surface_add_vertex(vertex2);
-								chunk_meshes.get_value(chunk_index.x, chunk_index.y, chunk_index.z).surface_add_vertex(vertex3);
-
-	for index in chunk_meshes.size():
-		if valid_chunks.values[index]:
-			chunk_meshes.values[index].surface_end();
-			
-	var material_triangles = StandardMaterial3D.new();
-	material_triangles.vertex_color_use_as_albedo = true;
-			
-	for index in range(0, chunk_meshes.size()):
-		var chunk: Chunk = chunk_scene.instantiate();
-		if chunk_meshes.values[index]:
-			if chunk_meshes.values[index].create_trimesh_shape():
-				chunk_meshes.values[index].surface_set_material(0, material_triangles);
-				chunk.mesh_node.mesh = chunk_meshes.values[index]
-				chunk.low_collision.set_shape(chunk_meshes.values[index].create_convex_shape());
-				chunk.high_collision.set_shape(chunk_meshes.values[index].create_trimesh_shape());
-				chunk.parent = self;
-				chunks_nodes.set_value_index(index, chunk);
-				chunk_container.add_child(chunk);
-
+## This initialises and fills the matrix object (an Array3D) with its default values
+## currently this is a cube shape
 func init_matrix() -> void:
 	var matrix_size = size * resolution;
 	matrix = Array3D.new();
 	matrix.initialise_size(matrix_size, matrix_size, matrix_size);
-	
 	chunks = Array3D.new();
-	chunks.initialise_size(size, size, size);
-	chunks_nodes = Array3D.new();
-	chunks_nodes.initialise_size(size, size, size);
+	chunks.initialise_size((size * resolution) / chunk_size, (size * resolution) / chunk_size, (size * resolution) / chunk_size);
 	
 	for x in range(matrix_size):
 		for y in range(matrix_size):
@@ -390,10 +95,288 @@ func init_matrix() -> void:
 				else:
 					matrix.set_value(x, y, z, 1)
 
-#func randomize_seed() -> void:
-	#seed = randi();
-	#
+## This reads the matrix object and based on the values it calculates three meshes
+## a points mesh, to display the matrix values
+## a cubes mesh, to show the boundry for each marching cube
+## a triangles mesh, the final mesh within the cubes, made of triangles
+func _generate() -> void:
+	if not matrix:
+		init_matrix()
 	
+	var matrix_size = size * resolution;
+	var mesh_points = ImmediateMesh.new();
+	mesh_points.surface_begin(Mesh.PRIMITIVE_POINTS);
+	
+	var mesh_cubes: ImmediateMesh = ImmediateMesh.new();
+	mesh_cubes.surface_begin(Mesh.PRIMITIVE_LINES);
+	
+	var mesh_triangles: ImmediateMesh = ImmediateMesh.new();
+	mesh_triangles.surface_begin(Mesh.PRIMITIVE_TRIANGLES);
+	var valid_surface: bool = false;
+	
+	var chunk_meshes: Array3D = Array3D.new();
+	chunk_meshes.initialise_size(chunks.x_max, chunks.y_max, chunks.z_max);
+	var valid_chunks: Array3D = Array3D.new();
+	valid_chunks.initialise_size(chunks.x_max, chunks.y_max, chunks.z_max);
+	
+	chunk_meshes.fill(null);
+	valid_chunks.fill(null);
+	
+	for x in range(0, matrix_size):
+		for y in range(0, matrix_size):
+			for z in range(0, matrix_size):
+				var point: Vector3 = Vector3(float(x) / float(resolution), float(y) / float(resolution), float(z) / float(resolution));
+				var point_value: float = matrix.get_value(x, y, z);
+
+				var chunk_index: Vector3 = _get_chunk_index(x, y, z);
+
+				if not chunk_meshes.get_value(chunk_index.x, chunk_index.y, chunk_index.z):
+					var chunk_mesh: ImmediateMesh = ImmediateMesh.new();
+					chunk_mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLES);
+					chunk_meshes.set_value(chunk_index.x, chunk_index.y, chunk_index.z, chunk_mesh);
+
+				var point_color: Color = Color(
+					float(point_value),
+					float(point_value),
+					float(point_value)
+				);
+
+				mesh_points.surface_set_color(point_color);
+				mesh_points.surface_add_vertex(point);
+
+				if x < matrix_size - 1 and y < matrix_size - 1 and z < matrix_size - 1:
+					var cube_vertices: Array[Vector3] = _create_cube_vertices(point);
+					var cube_values: Array[float] = _get_cube_values(matrix, Vector3(int(x), int(y), int(z)));
+
+					if _validate_cube(cube_values):
+						_add_cube_vertices(mesh_cubes, cube_vertices);
+
+					var lookup_index : int = _get_lookup_index(cube_values);
+
+					var triangles: Array = Constants.marching_triangles[lookup_index];
+
+					var color: Color = Color(
+						float(point.x + size) / float(size * 2), 
+						float(point.y + size) / float(size * 2), 
+						float(point.z + size) / float(size * 2)
+					);
+
+					for index in range(0, triangles.size(), 3):
+						var point_1: int = triangles[index];
+						if point_1 == -1: continue;
+
+						var point_2: int = triangles[index + 1];
+						if point_2 == -1: continue;
+
+						var point_3: int = triangles[index + 2];
+						if point_3 == -1: continue;
+
+						var a0: int = Constants.cornerIndexAFromEdge[triangles[index]];
+						var b0: int = Constants.cornerIndexBFromEdge[triangles[index]];
+
+						var a1: int = Constants.cornerIndexAFromEdge[triangles[index+1]];
+						var b1: int = Constants.cornerIndexBFromEdge[triangles[index+1]];
+
+						var a2: int = Constants.cornerIndexAFromEdge[triangles[index+2]];
+						var b2: int = Constants.cornerIndexBFromEdge[triangles[index+2]];
+
+						var vertex1: Vector3 = _interpolate(cube_vertices[a0], cube_values[a0], cube_vertices[b0], cube_values[b0]);
+						var vertex3: Vector3 = _interpolate(cube_vertices[a1], cube_values[a1], cube_vertices[b1], cube_values[b1]);
+						var vertex2: Vector3 = _interpolate(cube_vertices[a2], cube_values[a2], cube_vertices[b2], cube_values[b2]);
+
+						var vector_a: Vector3 = Vector3(
+							vertex3.x - vertex1.x,
+							vertex3.y - vertex1.y,
+							vertex3.z - vertex1.z,
+						)
+
+						var vector_b: Vector3 = Vector3(
+							vertex2.x - vertex1.x,
+							vertex2.y - vertex1.y,
+							vertex2.z - vertex1.z,
+						)
+
+						var vector_normal: Vector3 = Vector3(
+							vector_a.y * vector_b.z - vector_a.z * vector_b.y,
+							vector_a.z * vector_b.x - vector_a.x * vector_b.z,
+							vector_a.x * vector_b.y - vector_a.y * vector_b.x,
+						)
+
+						var chunk_mesh: ImmediateMesh = chunk_meshes.get_value(chunk_index.x, chunk_index.y, chunk_index.z);
+						chunk_mesh.surface_set_color(color);
+						chunk_mesh.surface_set_normal(vector_normal);
+
+						if vertex1 and vertex2 and vertex3:
+							valid_chunks.set_value(chunk_index.x, chunk_index.y, chunk_index.z, true);
+							chunk_mesh.surface_add_vertex(vertex1);
+							chunk_mesh.surface_add_vertex(vertex2);
+							chunk_mesh.surface_add_vertex(vertex3);
+							chunk_meshes.set_value(chunk_index.x, chunk_index.y, chunk_index.z, chunk_mesh);
+
+	mesh_points.surface_end();
+	mesh_cubes.surface_end();
+	if valid_surface:
+		mesh_triangles.surface_end();
+	
+	var material_points: StandardMaterial3D = StandardMaterial3D.new();
+	material_points.vertex_color_use_as_albedo = true;
+	material_points.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED;
+	material_points.use_point_size = true;
+	material_points.point_size = 8;
+	
+	var material_cubes: StandardMaterial3D = StandardMaterial3D.new();
+	material_cubes.vertex_color_use_as_albedo = true;
+	material_cubes.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED;
+	
+	#var material_triangles: StandardMaterial3D = test_material;
+	var material_triangles: StandardMaterial3D = StandardMaterial3D.new();
+	material_triangles.vertex_color_use_as_albedo = true;
+	
+	mesh_points.surface_set_material(0, material_points);
+	if points_node:
+		points_node.mesh = mesh_points;
+		points_node.visible = show_points;
+		
+	mesh_cubes.surface_set_material(0, material_cubes);
+	if cubes_node:
+		cubes_node.mesh = mesh_cubes;
+		cubes_node.visible = show_grid;
+
+	if valid_surface:
+		mesh_triangles.surface_set_material(0, material_triangles);
+		if triangles_node:
+			triangles_node.visible = show_mesh;
+			triangles_node.mesh = mesh_triangles;
+
+			if mesh_triangles.create_trimesh_shape():
+				low_collision_node.shape = null;
+				low_collision_node.set_shape(mesh_triangles.create_convex_shape());
+				high_collision_node.set_shape(mesh_triangles.create_trimesh_shape());
+	else:
+		if triangles_node:
+			triangles_node.visible = false;
+			low_collision_node.disabled = true;
+			high_collision_node.disabled = true;
+			
+	for index in chunk_meshes.size():
+		var chunk_index: Vector3 = chunk_meshes.get_coord_from_index(index);
+		if valid_chunks.get_value(chunk_index.x, chunk_index.y, chunk_index.z):
+			var chunk_mesh: ImmediateMesh = chunk_meshes.get_value(chunk_index.x, chunk_index.y, chunk_index.z);
+			chunk_mesh.surface_end();
+			
+			var chunk: Chunk = chunk_scene.instantiate();
+			
+			chunk.visible = show_mesh;
+			chunk.mesh_node.mesh = chunk_mesh;
+			chunk.parent = self;
+
+			if chunk_mesh.create_trimesh_shape():
+				chunk.low_collision.shape = null;
+				chunk.low_collision.set_shape(chunk_mesh.create_convex_shape());
+				chunk.high_collision.set_shape(chunk_mesh.create_trimesh_shape());
+				
+				chunks.set_value(chunk_index.x, chunk_index.y, chunk_index.z, chunk);
+				
+				chunk_container.add_child(chunk);
+			
+
+func _generate_chunks(affected_chunks: Array[Vector3]) -> void:
+	var matrix_size = size * resolution;
+
+	for chunk in affected_chunks:
+		var chunk_mesh: ImmediateMesh = ImmediateMesh.new();
+		chunk_mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLES);
+		var valid_chunk: bool = false;
+
+		for x in range(chunk.x * chunk_size, chunk.x * chunk_size + chunk_size):
+			for y in range(chunk.x * chunk_size, chunk.x * chunk_size + chunk_size):
+				for z in range(chunk.x * chunk_size, chunk.x * chunk_size + chunk_size):
+
+		#for x in range(0, matrix_size):
+			#for y in range(0, matrix_size):
+				#for z in range(0, matrix_size):
+					#if _get_chunk_index(x, y, z) == chunk:
+					var point: Vector3 = Vector3(float(x), float(y), float(z));
+					print(point)
+					if x < matrix_size - 1 and y < matrix_size - 1 and z < matrix_size - 1:
+						var cube_vertices: Array[Vector3] = _create_cube_vertices(point);
+						var cube_values: Array[float] = _get_cube_values(matrix, Vector3(int(x), int(y), int(z)));
+
+						var lookup_index : int = _get_lookup_index(cube_values);
+						var triangles: Array = Constants.marching_triangles[lookup_index];
+
+						for index in range(0, triangles.size(), 3):
+							var point_1: int = triangles[index];
+							if point_1 == -1: continue;
+
+							var point_2: int = triangles[index + 1];
+							if point_2 == -1: continue;
+
+							var point_3: int = triangles[index + 2];
+							if point_3 == -1: continue;
+
+							var a0: int = Constants.cornerIndexAFromEdge[triangles[index]];
+							var b0: int = Constants.cornerIndexBFromEdge[triangles[index]];
+
+							var a1: int = Constants.cornerIndexAFromEdge[triangles[index+1]];
+							var b1: int = Constants.cornerIndexBFromEdge[triangles[index+1]];
+
+							var a2: int = Constants.cornerIndexAFromEdge[triangles[index+2]];
+							var b2: int = Constants.cornerIndexBFromEdge[triangles[index+2]];
+
+							var vertex1: Vector3 = _interpolate(cube_vertices[a0], cube_values[a0], cube_vertices[b0], cube_values[b0]);
+							var vertex3: Vector3 = _interpolate(cube_vertices[a1], cube_values[a1], cube_vertices[b1], cube_values[b1]);
+							var vertex2: Vector3 = _interpolate(cube_vertices[a2], cube_values[a2], cube_vertices[b2], cube_values[b2]);
+
+							var vector_a: Vector3 = Vector3(
+								vertex3.x - vertex1.x,
+								vertex3.y - vertex1.y,
+								vertex3.z - vertex1.z,
+							)
+
+							var vector_b: Vector3 = Vector3(
+								vertex2.x - vertex1.x,
+								vertex2.y - vertex1.y,
+								vertex2.z - vertex1.z,
+							)
+
+							var vector_normal: Vector3 = Vector3(
+								vector_a.y * vector_b.z - vector_a.z * vector_b.y,
+								vector_a.z * vector_b.x - vector_a.x * vector_b.z,
+								vector_a.x * vector_b.y - vector_a.y * vector_b.x,
+							)
+							
+							var color: Color = Color(
+								float(point.x + size) / float(size * 2), 
+								float(point.y + size) / float(size * 2), 
+								float(point.z + size) / float(size * 2)
+							);
+
+							chunk_mesh.surface_set_color(color);
+							chunk_mesh.surface_set_normal(vector_normal);
+
+							if vertex1 and vertex2 and vertex3:
+								valid_chunk = true;
+								chunk_mesh.surface_add_vertex(vertex1);
+								chunk_mesh.surface_add_vertex(vertex2);
+								chunk_mesh.surface_add_vertex(vertex3);
+
+		if valid_chunk:
+			chunk_mesh.surface_end();
+			var new_chunk: Chunk = chunk_scene.instantiate();
+			
+			#new_chunk.visible = show_mesh;
+			new_chunk.mesh_node.mesh = chunk_mesh;
+			new_chunk.parent = self;
+
+			if chunk_mesh.create_trimesh_shape():
+				new_chunk.low_collision.shape = null;
+				new_chunk.low_collision.set_shape(chunk_mesh.create_convex_shape());
+				new_chunk.high_collision.set_shape(chunk_mesh.create_trimesh_shape());
+
+				chunk_container.add_child(new_chunk);
+				chunks.set_value(chunk.x, chunk.y, chunk.z, new_chunk);
+
 func _create_cube_vertices(point_position: Vector3) -> Array[Vector3]:
 	var offset: float = 1.0 / float(resolution)
 
@@ -502,21 +485,21 @@ func _validate_cube(values: Array[float]) -> bool:
 		
 func carve_around_point(global_point: Vector3, radius: float) -> void:
 	var local_point: Vector3 = (global_point - position) * resolution;
-	var points: Array[Vector3] = _get_points_in_sphere(local_point, 4);
-	var affected_chunks: Array[Vector3];
+	var points: Array[Vector3] = _get_points_in_sphere(local_point, radius);
 
 	for point in points:
 		var distance: float = point.distance_to(local_point);
 		var distance_normalised: float = 0 - (1 - (distance / radius));
 		matrix.set_value(point.x, point.y, point.z, distance_normalised);
-		var chunk: Vector3 = _get_chunk(point);
-		if not affected_chunks.has(chunk):
-			affected_chunks.append(chunk);
-		#var remaining: Array = matrix.values.filter(func(item): return item >= cutoff);
-		#if remaining.size() > matrix.values.size() / 10:
-			#matrix.values.fill(-1);
-	update_chunks(affected_chunks);
-	#generate();
+
+	var affected_chunks: Array[Vector3] = _get_affected_chunks(points);
+
+	for chunk in affected_chunks:
+		if chunks.get_value(chunk.x, chunk.y, chunk.z):
+			chunks.get_value(chunk.x, chunk.y, chunk.z).queue_free()
+			chunks.set_value(chunk.x, chunk.y, chunk.z, null);
+
+	_generate_chunks(affected_chunks);
 
 func _get_points_in_sphere(center_point: Vector3, radius: float) -> Array[Vector3]:
 	var points: Array[Vector3] = [];
@@ -532,9 +515,22 @@ func _get_points_in_sphere(center_point: Vector3, radius: float) -> Array[Vector
 
 	return points;
 
-func _get_chunk(point: Vector3) -> Vector3:
-	var chunk_x = point.x / resolution;
-	var chunk_y = point.y / resolution;
-	var chunk_z = point.z / resolution;
+func _get_chunk_index(x: int, y: int, z: int) -> Vector3:
+	var x_remainder: int = x % chunk_size;
+	var y_remainder: int = y % chunk_size;
+	var z_remainder: int = z % chunk_size;
+	
+	var chunk_x: int = (x - x_remainder) / chunk_size;
+	var chunk_y: int = (y - y_remainder) / chunk_size;
+	var chunk_z: int = (z - z_remainder) / chunk_size;
 	
 	return Vector3(chunk_x, chunk_y, chunk_z);
+
+func _get_affected_chunks(points: Array[Vector3]) -> Array[Vector3]:
+	var affected_chunks: Array[Vector3] = [];
+	for point in points:
+		var chunk = _get_chunk_index(point.x, point.y, point.z);
+		if not affected_chunks.has(chunk):
+			affected_chunks.append(chunk);
+
+	return affected_chunks;
