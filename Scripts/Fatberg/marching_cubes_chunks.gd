@@ -110,10 +110,6 @@ func _generate() -> void:
 	var mesh_cubes: ImmediateMesh = ImmediateMesh.new();
 	mesh_cubes.surface_begin(Mesh.PRIMITIVE_LINES);
 	
-	var mesh_triangles: ImmediateMesh = ImmediateMesh.new();
-	mesh_triangles.surface_begin(Mesh.PRIMITIVE_TRIANGLES);
-	var valid_surface: bool = false;
-	
 	var chunk_meshes: Array3D = Array3D.new();
 	chunk_meshes.initialise_size(chunks.x_max, chunks.y_max, chunks.z_max);
 	var valid_chunks: Array3D = Array3D.new();
@@ -215,8 +211,6 @@ func _generate() -> void:
 
 	mesh_points.surface_end();
 	mesh_cubes.surface_end();
-	if valid_surface:
-		mesh_triangles.surface_end();
 	
 	var material_points: StandardMaterial3D = StandardMaterial3D.new();
 	material_points.vertex_color_use_as_albedo = true;
@@ -242,16 +236,6 @@ func _generate() -> void:
 		cubes_node.mesh = mesh_cubes;
 		cubes_node.visible = show_grid;
 
-	if valid_surface:
-		mesh_triangles.surface_set_material(0, material_triangles);
-		if triangles_node:
-			triangles_node.visible = show_mesh;
-			triangles_node.mesh = mesh_triangles;
-
-			if mesh_triangles.create_trimesh_shape():
-				low_collision_node.shape = null;
-				low_collision_node.set_shape(mesh_triangles.create_convex_shape());
-				high_collision_node.set_shape(mesh_triangles.create_trimesh_shape());
 	else:
 		if triangles_node:
 			triangles_node.visible = false;
@@ -269,16 +253,13 @@ func _generate() -> void:
 			chunk.visible = show_mesh;
 			chunk.mesh_node.mesh = chunk_mesh;
 			chunk.parent = self;
-
-			if chunk_mesh.create_trimesh_shape():
-				chunk.low_collision.shape = null;
-				chunk.low_collision.set_shape(chunk_mesh.create_convex_shape());
-				chunk.high_collision.set_shape(chunk_mesh.create_trimesh_shape());
+			var collision_shape: ConvexPolygonShape3D = chunk_mesh.create_convex_shape();
+			if collision_shape:
+				chunk.low_collision.set_shape(collision_shape);
 				
 				chunks.set_value(chunk_index.x, chunk_index.y, chunk_index.z, chunk);
 				
-				chunk_container.add_child(chunk);
-			
+				chunk_container.add_child(chunk)
 
 func _generate_chunks(affected_chunks: Array[Vector3]) -> void:
 	var matrix_size = size * resolution;
@@ -364,10 +345,9 @@ func _generate_chunks(affected_chunks: Array[Vector3]) -> void:
 			new_chunk.mesh_node.mesh = chunk_mesh;
 			new_chunk.parent = self;
 
-			if chunk_mesh.create_trimesh_shape():
-				new_chunk.low_collision.shape = null;
-				new_chunk.low_collision.set_shape(chunk_mesh.create_convex_shape());
-				new_chunk.high_collision.set_shape(chunk_mesh.create_trimesh_shape());
+			var collision_shape: ConvexPolygonShape3D = chunk_mesh.create_convex_shape();
+			if collision_shape:
+				new_chunk.low_collision.set_shape(collision_shape);
 
 				chunk_container.add_child(new_chunk);
 				chunks.set_value(chunk.x, chunk.y, chunk.z, new_chunk);
@@ -523,9 +503,16 @@ func _get_chunk_index(x: int, y: int, z: int) -> Vector3:
 
 func _get_affected_chunks(points: Array[Vector3]) -> Array[Vector3]:
 	var affected_chunks: Array[Vector3] = [];
+	var x_max = chunks.x_max * chunk_size;
+	var y_max = chunks.y_max * chunk_size;
+	var z_max = chunks.z_max * chunk_size;
 	for point in points:
-		var chunk = _get_chunk_index(point.x, point.y, point.z);
-		if not affected_chunks.has(chunk):
-			affected_chunks.append(chunk);
+		for x_modifier in range(-1, 1):
+			for y_modifier in range(-1, 1):
+				for z_modifier in range(-1, 1):
+					if point.x + x_modifier < x_max and point.x + x_modifier >= 0 and point.y + y_modifier < y_max and point.y + y_modifier >= 0 and point.z + z_modifier < z_max and point.z + z_modifier >= 0:
+						var chunk: Vector3 = _get_chunk_index(point.x + x_modifier, point.y + y_modifier, point.z + z_modifier);
+						if not affected_chunks.has(chunk):
+							affected_chunks.append(chunk);
 
 	return affected_chunks;

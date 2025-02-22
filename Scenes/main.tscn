@@ -47,6 +47,10 @@ environment = SubResource("Environment_llovf")
 
 [node name="Level" type="Node" parent="."]
 
+[node name="Fatberg" parent="Level" instance=ExtResource("3_rssgk")]
+size = 8
+resolution = 8
+
 [node name="Floor" type="StaticBody3D" parent="Level"]
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Level/Floor"]
@@ -54,7 +58,3 @@ shape = SubResource("WorldBoundaryShape3D_rox61")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Level/Floor"]
 mesh = SubResource("PlaneMesh_87i16")
-
-[node name="MarchingCubes" parent="." instance=ExtResource("3_rssgk")]
-size = 8
-resolution = 10
