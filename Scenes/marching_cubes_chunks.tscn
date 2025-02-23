@@ -2,9 +2,9 @@
 
 [ext_resource type="Script" path="res://Scripts/Fatberg/marching_cubes_chunks.gd" id="1_ft0ih"]
 
-[sub_resource type="ImmediateMesh" id="ImmediateMesh_lv14l"]
+[sub_resource type="ImmediateMesh" id="ImmediateMesh_a685h"]
 
-[sub_resource type="ImmediateMesh" id="ImmediateMesh_rk7gq"]
+[sub_resource type="ImmediateMesh" id="ImmediateMesh_1h5n8"]
 
 [sub_resource type="ImmediateMesh" id="ImmediateMesh_fnqbl"]
 
@@ -31,11 +31,11 @@ chunk_container = NodePath("Chunk Container")
 
 [node name="Points Mesh" type="MeshInstance3D" parent="."]
 visible = false
-mesh = SubResource("ImmediateMesh_lv14l")
+mesh = SubResource("ImmediateMesh_a685h")
 
 [node name="Cubes Mesh" type="MeshInstance3D" parent="."]
 visible = false
-mesh = SubResource("ImmediateMesh_rk7gq")
+mesh = SubResource("ImmediateMesh_1h5n8")
 
 [node name="Triangles Mesh" type="MeshInstance3D" parent="."]
 visible = false
