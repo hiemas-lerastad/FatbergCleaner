@@ -25,7 +25,6 @@ func _on_cleared():
 	freeze = false
 	sleeping = false
 	mass = 2
-	set_collision_layer(3)
 	set_collision_mask_value(3,true)
-	set_collision_layer(4)
+	set_collision_layer(16)
 	set_collision_mask_value(4,true)
