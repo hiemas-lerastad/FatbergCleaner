@@ -49,7 +49,7 @@ environment = SubResource("Environment_llovf")
 [node name="Level" type="Node" parent="."]
 
 [node name="collectable" parent="Level" instance=ExtResource("3_figyp")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.906214, 1.14428, 0.0639954)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.906214, 1.14428, -0.354995)
 
 [node name="Fatberg" parent="Level" instance=ExtResource("3_rssgk")]
 collision_mask = 4

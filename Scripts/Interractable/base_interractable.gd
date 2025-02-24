@@ -23,20 +23,21 @@ func _physics_process(delta):
 		
 		if(has_been_seen and len(surrounding_bodies) == 0):
 			if(has_been_exposed != true):
+				''' cleared for 1st time'''
 				has_been_exposed = true
 				emit_signal("cleared")
-				print("CLEARED")
 		elif((RayCheckCollider is CharacterBody3D and RayCheckCollider.name == "Player") or len(surrounding_bodies) > 0):
-			print("OBJECT VIEWABLE")
-			
+			''' has a path to outside fatberg'''
 			if(has_been_seen != true):
+				''' seen for 1st time'''
 				emit_signal("exposed")
 				has_been_seen = true
-				print("SEEN")
 		elif(RayCheckCollider is StaticBody3D):
-			print("OBJECT INSIDE")
+			''' object inside fatberg TBD: Potential sound effects to hint at hidden object?'''
+			pass
 		else:
-			print(RayCheckCollider)
+			''' any other situation i havent thought of'''
+			pass
 		
 
 func _ready():
