@@ -51,5 +51,7 @@ func _input(event):
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		interact_cast.force_raycast_update()
 		if interact_cast.is_colliding():
-			var collider: StaticBody3D = interact_cast.get_collider()
-			collider.parent.carve_around_point((interact_cast.get_collision_point()), 4.0);
+			
+			var collider = interact_cast.get_collider()
+			if(collider is StaticBody3D):
+				collider.parent.carve_around_point((interact_cast.get_collision_point()), 4.0);
