@@ -42,11 +42,19 @@ func physics_player_interraction() -> void:
 		carve_indicator.visible = false;
 
 func _physics_process(delta: float) -> void:
-	if not is_on_floor():
+	if not is_on_floor() and not Globals.debug:
 		velocity += get_gravity() * delta
-
-	if Input.is_action_just_pressed("move_jump") and is_on_floor():
+	if Input.is_action_just_pressed("move_jump") and (is_on_floor() or Globals.debug):
 		velocity.y = jump_velocity
+
+	if Input.is_action_just_released("move_jump") and Globals.debug:
+		velocity.y = 0 
+		
+	if Input.is_action_just_released("move_down") and Globals.debug:
+		velocity.y = 0 
+		
+	if Input.is_action_just_pressed("move_down") and Globals.debug:
+		velocity.y = -jump_velocity
 
 	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
 	var direction := (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
@@ -58,8 +66,8 @@ func _physics_process(delta: float) -> void:
 		velocity.z = move_toward(velocity.z, 0, speed)
 
 	move_and_slide()
-	physics_player_interraction()
 
+	physics_player_interraction()
 
 func _input(event):
 	if event is InputEventMouseMotion:
@@ -70,9 +78,13 @@ func _input(event):
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		interact_cast.force_raycast_update()
 		if interact_cast.is_colliding():
-			
 			var collider = interact_cast.get_collider()
 			if(collider is StaticBody3D and collider.name != "Floor"):
 				collider.parent.carve_around_point((interact_cast.get_collision_point()), 4.0);
 			elif(collider is interractable):
 				print("HI")
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed and Globals.debug:
+		interact_cast.force_raycast_update()
+		if interact_cast.is_colliding():
+			var collider: StaticBody3D = interact_cast.get_collider()
+			collider.parent.add_around_point((interact_cast.get_collision_point()), 4.0);

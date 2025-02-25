@@ -1,9 +1,10 @@
-[gd_scene load_steps=11 format=3 uid="uid://baffxghij0727"]
+[gd_scene load_steps=12 format=3 uid="uid://baffxghij0727"]
 
 [ext_resource type="Script" path="res://Scripts/Test/main.gd" id="2_mbvjg"]
 [ext_resource type="PackedScene" uid="uid://dcngr1fm4k043" path="res://Scenes/Interractables/collectable.tscn" id="3_figyp"]
 [ext_resource type="PackedScene" uid="uid://dpsi06xinqbpn" path="res://Scenes/Player.tscn" id="3_hf4c8"]
 [ext_resource type="PackedScene" uid="uid://brbkfaajf5qdy" path="res://Scenes/marching_cubes_chunks.tscn" id="3_rssgk"]
+[ext_resource type="Resource" uid="uid://c16vmgdpln5y0" path="res://Scripts/Resources/Matrix/blob_1.tres" id="4_8ahc5"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ba63i"]
 
@@ -41,7 +42,7 @@ transform = Transform3D(-0.879698, 0, -0.475532, 0, 1, 0, 0.475532, 0, -0.879698
 [node name="Environment" type="Node" parent="."]
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="Environment"]
-transform = Transform3D(0.612373, 0.612373, -0.499999, -0.707107, 0.707107, 0, 0.353553, 0.353553, 0.866026, 0, 6, 0)
+transform = Transform3D(-0.648458, -0.26511, -0.713596, -0.74255, 0.426781, 0.516215, 0.167696, 0.864624, -0.473606, 0, 6, 0)
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="Environment"]
 environment = SubResource("Environment_llovf")
@@ -49,15 +50,10 @@ environment = SubResource("Environment_llovf")
 [node name="Level" type="Node" parent="."]
 
 [node name="collectable" parent="Level" instance=ExtResource("3_figyp")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.906214, 1.14428, 0.389502)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.0287, 1.14428, 1.03152)
 
 [node name="collectable2" parent="Level" instance=ExtResource("3_figyp")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.30004, 1.14428, 0.595939)
-
-[node name="Fatberg" parent="Level" instance=ExtResource("3_rssgk")]
-collision_mask = 4
-size = 6
-resolution = 8
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.30004, 1.14428, 0.804572)
 
 [node name="Floor" type="StaticBody3D" parent="Level"]
 
@@ -66,3 +62,8 @@ shape = SubResource("WorldBoundaryShape3D_rox61")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Level/Floor"]
 mesh = SubResource("PlaneMesh_87i16")
+
+[node name="Fatberg1" parent="." instance=ExtResource("3_rssgk")]
+size = 6
+resolution = 10
+initial_matrix = ExtResource("4_8ahc5")

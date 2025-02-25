@@ -1,9 +1,4 @@
-[gd_resource type="StandardMaterial3D" load_steps=2 format=3 uid="uid://ddaupb0eij1tu"]
-
-[ext_resource type="Texture2D" uid="uid://br6bli082gmsy" path="res://icon.svg" id="1_vs6qt"]
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://biw4b2bhjj1np"]
 
 [resource]
-albedo_color = Color(0.52639, 0.185169, 0.0117149, 1)
-albedo_texture = ExtResource("1_vs6qt")
-metallic_specular = 0.3
-roughness = 0.8
+albedo_color = Color(1, 0, 0, 1)
