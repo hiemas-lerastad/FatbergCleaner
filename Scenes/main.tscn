@@ -1,6 +1,7 @@
-[gd_scene load_steps=10 format=3 uid="uid://baffxghij0727"]
+[gd_scene load_steps=11 format=3 uid="uid://baffxghij0727"]
 
 [ext_resource type="Script" path="res://Scripts/Test/main.gd" id="2_mbvjg"]
+[ext_resource type="PackedScene" uid="uid://dcngr1fm4k043" path="res://Scenes/Interractables/collectable.tscn" id="3_figyp"]
 [ext_resource type="PackedScene" uid="uid://dpsi06xinqbpn" path="res://Scenes/Player.tscn" id="3_hf4c8"]
 [ext_resource type="PackedScene" uid="uid://brbkfaajf5qdy" path="res://Scenes/marching_cubes_chunks.tscn" id="3_rssgk"]
 
@@ -47,7 +48,11 @@ environment = SubResource("Environment_llovf")
 
 [node name="Level" type="Node" parent="."]
 
+[node name="collectable" parent="Level" instance=ExtResource("3_figyp")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.906214, 1.14428, -0.354995)
+
 [node name="Fatberg" parent="Level" instance=ExtResource("3_rssgk")]
+collision_mask = 4
 size = 6
 resolution = 8
 
