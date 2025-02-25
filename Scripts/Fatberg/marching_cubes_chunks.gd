@@ -47,19 +47,20 @@ extends Node3D;
 		show_mesh = value
 		if triangles_node:
 			triangles_node.visible = value;
+			
+@export var initial_matrix: Matrix;
 		
 @export_category("Nodes")
 @export var points_node: MeshInstance3D;
 @export var cubes_node: MeshInstance3D;
 @export var triangles_node: MeshInstance3D;
-@export var low_collision_node: CollisionShape3D;
-@export var high_collision_node: CollisionShape3D;
 @export var chunk_container: Node3D;
 
 @export_category("Assets")
 @export var texture: CompressedTexture2D;
 @export var chunk_scene: PackedScene = preload("res://Scenes/chunk.tscn");
-@export var test_material: StandardMaterial3D;
+@export var test_material: Material;
+@export var test_material_2: Material;
 		
 var center_mesh: Node;
 var cube_mesh: Node;
@@ -70,30 +71,37 @@ var chunks: Array3D;
 func _ready() -> void:
 	init_matrix();
 	_generate();
+	
+func _physics_process(delta: float) -> void:
+	if InputMap.has_action("interact_debug_print") and Globals.debug:
+		if Input.is_action_just_pressed("interact_debug_print"):
+			print('output to matrix.txt')
+			var save_file = FileAccess.open("res://Debug/matrix.txt", FileAccess.WRITE)
+			save_file.store_line(str(matrix.values))
 
 ## This initialises and fills the matrix object (an Array3D) with its default values
 ## currently this is a cube shape
 func init_matrix() -> void:
+	if initial_matrix:
+		size = initial_matrix.size;
+		resolution = initial_matrix.resolution;
+
 	var matrix_size = size * resolution;
 	matrix = Array3D.new();
 	matrix.initialise_size(matrix_size, matrix_size, matrix_size);
 	chunks = Array3D.new();
 	chunks.initialise_size((size * resolution) / chunk_size, (size * resolution) / chunk_size, (size * resolution) / chunk_size);
 	
-	for x in range(matrix_size):
-		for y in range(matrix_size):
-			for z in range(matrix_size):
-				# Plane
-				#if y < float(matrix_size) / 2 or y == 0:
-					#matrix.set_value(x, y, z, -1)
-				#else:
-					#matrix.set_value(x, y, z, 1)
-				
-				# Cube
-				if x == 0 or z == 0 or y == 0 or x == matrix_size -1 or y == matrix_size -1 or z == matrix_size -1:
-					matrix.set_value(x, y, z, -1)
-				else:
-					matrix.set_value(x, y, z, 1)
+	if initial_matrix:
+		matrix.values = initial_matrix.values;
+	else:
+		for x in range(matrix_size):
+			for y in range(matrix_size):
+				for z in range(matrix_size):
+					if x == 0 or z == 0 or y == 0 or x == matrix_size -1 or y == matrix_size -1 or z == matrix_size -1:
+						matrix.set_value(x, y, z, -1)
+					else:
+						matrix.set_value(x, y, z, 1)
 
 ## This reads the matrix object and based on the values it calculates three meshes
 ## a points mesh, to display the matrix values
@@ -197,6 +205,8 @@ func _generate() -> void:
 							vector_a.z * vector_b.x - vector_a.x * vector_b.z,
 							vector_a.x * vector_b.y - vector_a.y * vector_b.x,
 						)
+						
+						var uvs: Array[Vector2] = _get_uvs(vertex1, vertex2, vertex3, vector_normal);
 
 						var chunk_mesh: ImmediateMesh = chunk_meshes.get_value(chunk_index.x, chunk_index.y, chunk_index.z);
 						chunk_mesh.surface_set_color(color);
@@ -204,8 +214,11 @@ func _generate() -> void:
 
 						if vertex1 and vertex2 and vertex3:
 							valid_chunks.set_value(chunk_index.x, chunk_index.y, chunk_index.z, true);
+							chunk_mesh.surface_set_uv(uvs[0])
 							chunk_mesh.surface_add_vertex(vertex1);
+							chunk_mesh.surface_set_uv(uvs[1])
 							chunk_mesh.surface_add_vertex(vertex2);
+							chunk_mesh.surface_set_uv(uvs[2])
 							chunk_mesh.surface_add_vertex(vertex3);
 							chunk_meshes.set_value(chunk_index.x, chunk_index.y, chunk_index.z, chunk_mesh);
 
@@ -222,9 +235,10 @@ func _generate() -> void:
 	material_cubes.vertex_color_use_as_albedo = true;
 	material_cubes.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED;
 	
-	#var material_triangles: StandardMaterial3D = test_material;
-	var material_triangles: StandardMaterial3D = StandardMaterial3D.new();
-	material_triangles.vertex_color_use_as_albedo = true;
+	var material_triangles: Material = test_material;
+	#var material_triangles: StandardMaterial3D = StandardMaterial3D.new();
+	#material_triangles.vertex_color_use_as_albedo = true;
+	#material_triangles.next_pass = test_material_2
 	
 	mesh_points.surface_set_material(0, material_points);
 	if points_node:
@@ -239,8 +253,7 @@ func _generate() -> void:
 	else:
 		if triangles_node:
 			triangles_node.visible = false;
-			low_collision_node.disabled = true;
-			high_collision_node.disabled = true;
+			#collision_node.disabled = true;
 			
 	for index in chunk_meshes.size():
 		var chunk_index: Vector3 = chunk_meshes.get_coord_from_index(index);
@@ -248,10 +261,15 @@ func _generate() -> void:
 			var chunk_mesh: ImmediateMesh = chunk_meshes.get_value(chunk_index.x, chunk_index.y, chunk_index.z);
 			chunk_mesh.surface_end();
 			
+			chunk_mesh.surface_set_material(0, material_triangles);
+
 			var chunk: Chunk = chunk_scene.instantiate();
 			
 			chunk.visible = show_mesh;
 			chunk.mesh_node.mesh = chunk_mesh;
+			#chunk.shell_mesh_node.mesh = chunk_mesh;
+			#chunk.shell_mesh_node.position = chunk.mesh_node.position * 0.5;
+
 			chunk.parent = self;
 			var collision_shape: ConvexPolygonShape3D = chunk_mesh.create_convex_shape();
 			if collision_shape:
@@ -322,6 +340,8 @@ func _generate_chunks(affected_chunks: Array[Vector3]) -> void:
 								vector_a.x * vector_b.y - vector_a.y * vector_b.x,
 							)
 							
+							var uvs: Array[Vector2] = _get_uvs(vertex1, vertex2, vertex3, vector_normal);
+							
 							var color: Color = Color(
 								float(point.x + size) / float(size * 2), 
 								float(point.y + size) / float(size * 2), 
@@ -333,14 +353,18 @@ func _generate_chunks(affected_chunks: Array[Vector3]) -> void:
 
 							if vertex1 and vertex2 and vertex3:
 								valid_chunk = true;
+								chunk_mesh.surface_set_uv(uvs[0]);
 								chunk_mesh.surface_add_vertex(vertex1);
+								chunk_mesh.surface_set_uv(uvs[1]);
 								chunk_mesh.surface_add_vertex(vertex2);
+								chunk_mesh.surface_set_uv(uvs[2]);
 								chunk_mesh.surface_add_vertex(vertex3);
 
 		if valid_chunk:
 			chunk_mesh.surface_end();
 			var new_chunk: Chunk = chunk_scene.instantiate();
-			
+			var material_triangles: Material = test_material;
+			chunk_mesh.surface_set_material(0, material_triangles);
 			#new_chunk.visible = show_mesh;
 			new_chunk.mesh_node.mesh = chunk_mesh;
 			new_chunk.parent = self;
@@ -475,6 +499,24 @@ func carve_around_point(global_point: Vector3, radius: float) -> void:
 			chunks.set_value(chunk.x, chunk.y, chunk.z, null);
 
 	_generate_chunks(affected_chunks);
+	
+func add_around_point(global_point: Vector3, radius: float) -> void:
+	var local_point: Vector3 = (global_point - position) * resolution;
+	var points: Array[Vector3] = _get_points_in_sphere(local_point, radius);
+
+	for point in points:
+		var distance: float = point.distance_to(local_point);
+		var distance_normalised: float = 0 + (1 - (distance / radius));
+		matrix.set_value(point.x, point.y, point.z, distance_normalised);
+
+	var affected_chunks: Array[Vector3] = _get_affected_chunks(points);
+
+	for chunk in affected_chunks:
+		if chunks.get_value(chunk.x, chunk.y, chunk.z):
+			chunks.get_value(chunk.x, chunk.y, chunk.z).queue_free()
+			chunks.set_value(chunk.x, chunk.y, chunk.z, null);
+
+	_generate_chunks(affected_chunks);
 
 func _get_points_in_sphere(center_point: Vector3, radius: float) -> Array[Vector3]:
 	var points: Array[Vector3] = [];
@@ -516,3 +558,22 @@ func _get_affected_chunks(points: Array[Vector3]) -> Array[Vector3]:
 							affected_chunks.append(chunk);
 
 	return affected_chunks;
+
+func _get_uvs(vertex_a: Vector3, vertex_b: Vector3, vertex_c: Vector3, normal: Vector3) -> Array[Vector2]:
+	var uvs: Array[Vector2] = [];
+	uvs.resize(3);
+	
+	if normal.x > normal.z and normal.x >= normal.y:
+		uvs[0] = Vector2(vertex_a.z, vertex_a.y);
+		uvs[1] = Vector2(vertex_b.z, vertex_b.y);
+		uvs[2] = Vector2(vertex_c.z, vertex_c.y);
+	elif normal.z >= normal.x and normal.z >= normal.y:
+		uvs[0] = Vector2(vertex_a.z, vertex_a.y);
+		uvs[1] = Vector2(vertex_b.z, vertex_b.y);
+		uvs[2] = Vector2(vertex_c.z, vertex_c.y);
+	elif normal.y >= normal.x and normal.y >= normal.z:
+		uvs[0] = Vector2(vertex_a.x, vertex_a.z);
+		uvs[1] = Vector2(vertex_b.x, vertex_b.z);
+		uvs[2] = Vector2(vertex_c.x, vertex_c.z);
+
+	return uvs;

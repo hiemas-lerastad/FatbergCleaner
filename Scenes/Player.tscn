@@ -11,11 +11,13 @@
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_o2eqf"]
 transparency = 1
-albedo_color = Color(1, 1, 1, 0.498039)
+blend_mode = 3
+albedo_color = Color(1, 1, 1, 0)
 
 [node name="Player" type="CharacterBody3D" node_paths=PackedStringArray("camera", "interact_cast", "carve_indicator")]
 collision_layer = 8
 collision_mask = 3
+safe_margin = 0.01
 script = ExtResource("1_7w5nm")
 camera = NodePath("Camera3D")
 interact_cast = NodePath("Camera3D/RayCast3D")
@@ -38,6 +40,10 @@ target_position = Vector3(0, -3, 0)
 collision_mask = 4
 hit_from_inside = true
 collide_with_areas = true
+
+[node name="SpotLight3D" type="SpotLight3D" parent="Camera3D"]
+light_energy = 5.0
+spot_angle = 25.0
 
 [node name="Carve Indicator" type="MeshInstance3D" parent="."]
 visible = false

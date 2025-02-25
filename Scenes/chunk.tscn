@@ -1,15 +1,155 @@
-[gd_scene load_steps=2 format=3 uid="uid://qdpxjpvtlgbr"]
+[gd_scene load_steps=6 format=3 uid="uid://qdpxjpvtlgbr"]
 
 [ext_resource type="Script" path="res://Scripts/Fatberg/chunk.gd" id="1_fe7wt"]
+[ext_resource type="Texture2D" uid="uid://yywnqlf36xsd" path="res://Assets/Textures/sludge_overlay.png" id="2_b7c3l"]
 
-[node name="Chunk" type="StaticBody3D" node_paths=PackedStringArray("mesh_node", "low_collision", "high_collision")]
+[sub_resource type="Shader" id="Shader_q3fsp"]
+code = "shader_type spatial;
+render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_burley, specular_schlick_ggx;
+
+uniform sampler2D texture_albedo : source_color, filter_linear_mipmap, repeat_enable;
+uniform float point_size : hint_range(0.1, 128.0, 0.1);
+
+uniform float roughness : hint_range(0.0, 1.0);
+uniform sampler2D texture_metallic : hint_default_white, filter_linear_mipmap, repeat_enable;
+uniform vec4 metallic_texture_channel;
+uniform sampler2D texture_roughness : hint_roughness_r, filter_linear_mipmap, repeat_enable;
+
+uniform float specular : hint_range(0.0, 1.0, 0.01);
+uniform float metallic : hint_range(0.0, 1.0, 0.01);
+varying vec3 uv1_triplanar_pos;
+
+uniform float uv1_blend_sharpness : hint_range(0.0, 150.0, 0.001);
+varying vec3 uv1_power_normal;
+
+uniform vec3 uv1_scale;
+uniform vec3 uv1_offset;
+uniform vec3 uv2_scale;
+uniform vec3 uv2_offset;
+
+uniform sampler2D noise_deformation_sampler : hint_normal, filter_linear_mipmap, repeat_enable;
+uniform sampler2D noise_sampler : filter_linear_mipmap, repeat_enable;
+uniform sampler2D curve : repeat_disable;
+
+uniform float glossiness = 0.5;
+uniform float opacity = 0.8;
+uniform float shell_length = 0.15;
+uniform float shell_deformation = 0.0;
+uniform float shell_gravity = 0.0;
+
+uniform vec2 direction_and_speed = vec2(0.25, -0.30);
+uniform vec2 scale = vec2(1.0);
+
+varying float object_y;
+
+void vertex() {
+	object_y = NORMAL.y;
+	vec3 normal = NORMAL;
+
+	TANGENT = vec3(0.0, 0.0, -1.0) * abs(normal.x);
+	TANGENT += vec3(1.0, 0.0, 0.0) * abs(normal.y);
+	TANGENT += vec3(1.0, 0.0, 0.0) * abs(normal.z);
+	TANGENT = normalize(TANGENT);
+
+	BINORMAL = vec3(0.0, 1.0, 0.0) * abs(normal.x);
+	BINORMAL += vec3(0.0, 0.0, -1.0) * abs(normal.y);
+	BINORMAL += vec3(0.0, 1.0, 0.0) * abs(normal.z);
+	BINORMAL = normalize(BINORMAL);
+
+	uv1_power_normal = pow(abs(NORMAL), vec3(uv1_blend_sharpness));
+	uv1_triplanar_pos = VERTEX * uv1_scale + uv1_offset;
+	uv1_power_normal /= dot(uv1_power_normal, vec3(1.0));
+	uv1_triplanar_pos *= vec3(1.0, -1.0, 1.0);
+
+	float noise = 0.5 - texture(noise_deformation_sampler, UV + COLOR.r * 0.15).x;
+	VERTEX += NORMAL * texture(curve, vec2(COLOR.r * COLOR.g, 0.0)).z * shell_length ;
+	VERTEX -= noise * COLOR.r * shell_deformation;
+	VERTEX.y -=  COLOR.r * shell_gravity;
+}
+
+vec4 triplanar_texture(sampler2D p_sampler, vec3 p_weights, vec3 p_triplanar_pos, vec2 uv) {
+	vec4 samp = vec4(0.0);
+	samp += texture(p_sampler, p_triplanar_pos.xy) * p_weights.z;
+	samp += texture(p_sampler, p_triplanar_pos.xz) * p_weights.y;
+	samp += texture(p_sampler, (p_triplanar_pos.zy * vec2(-1.0, 1.0))) * p_weights.x;
+	samp *= texture(p_sampler, uv * scale - direction_and_speed * TIME);
+	return samp;
+}
+
+void fragment() {
+	vec4 albedo_tex = triplanar_texture(texture_albedo, uv1_power_normal, uv1_triplanar_pos, UV);
+	ALBEDO = albedo_tex.rgb;
+	float strand =  texture(noise_sampler, UV).x;
+	ALBEDO *= strand * 0.6 + 0.4;
+	ALPHA = opacity;
+
+	float metallic_tex = dot(triplanar_texture(texture_metallic, uv1_power_normal, uv1_triplanar_pos, UV), metallic_texture_channel);
+	METALLIC = metallic_tex * metallic;
+	SPECULAR = specular;
+
+	vec4 roughness_texture_channel = vec4(1.0, 0.0, 0.0, 0.0);
+	float roughness_tex = dot(triplanar_texture(texture_roughness, uv1_power_normal, uv1_triplanar_pos, UV), roughness_texture_channel);
+	ROUGHNESS = roughness_tex * roughness;
+	//ALPHA *= albedo.a * albedo_tex.a;
+}
+
+float fresnel(float amount, vec3 normal, vec3 view)
+{
+	return pow((1.0 - clamp(dot(normalize(normal), normalize(view)), 0.0, 1.0 )), amount);
+}
+
+void light() {
+	float NdotL = clamp(dot(NORMAL, LIGHT) * ATTENUATION * 4.0, 0.0, 1.0);
+	
+	// specular
+	vec3 H = normalize(VIEW + LIGHT);
+	float NdotH = max(0, dot(NORMAL, H));
+	float light_specular = clamp(pow(NdotH, 1.0 / glossiness), 0.0, 1.0);
+	// rim
+	float rimDot = 1.0 - dot(VIEW, NORMAL);
+	float rim = clamp(rimDot * NdotL, 0.0, 1.0);
+	
+	DIFFUSE_LIGHT += NdotL * (rim + light_specular);
+	
+	DIFFUSE_LIGHT += clamp(vec3(1.0) * step(0.5, fresnel(1.5, NORMAL, VIEW)) * object_y, 0.0, 1.0);
+}"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_bhn06"]
+render_priority = 0
+shader = SubResource("Shader_q3fsp")
+shader_parameter/point_size = 1.0
+shader_parameter/roughness = 1.0
+shader_parameter/metallic_texture_channel = null
+shader_parameter/specular = 0.5
+shader_parameter/metallic = 0.0
+shader_parameter/uv1_blend_sharpness = 1.0
+shader_parameter/uv1_scale = Vector3(1, 1, 1)
+shader_parameter/uv1_offset = Vector3(0, 0, 0)
+shader_parameter/uv2_scale = Vector3(1, 1, 1)
+shader_parameter/uv2_offset = Vector3(0, 0, 0)
+shader_parameter/glossiness = 0.5
+shader_parameter/opacity = 0.8
+shader_parameter/shell_length = 0.15
+shader_parameter/shell_deformation = 0.0
+shader_parameter/shell_gravity = 0.0
+shader_parameter/direction_and_speed = Vector2(0.25, -0.3)
+shader_parameter/scale = Vector2(1, 1)
+shader_parameter/texture_albedo = ExtResource("2_b7c3l")
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_6xla2"]
+material = SubResource("ShaderMaterial_bhn06")
+
+[node name="Chunk" type="StaticBody3D" node_paths=PackedStringArray("mesh_node", "low_collision")]
 collision_layer = 6
 collision_mask = 8
 script = ExtResource("1_fe7wt")
 mesh_node = NodePath("Mesh")
 low_collision = NodePath("Low Collision Shape")
-high_collision = NodePath("")
 
 [node name="Mesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_6xla2")
+
+[node name="Shell Mesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)
 
 [node name="Low Collision Shape" type="CollisionShape3D" parent="."]
