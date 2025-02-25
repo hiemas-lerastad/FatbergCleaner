@@ -71,3 +71,4 @@ interact_click={
 3d_physics/layer_2="Destructable Low"
 3d_physics/layer_3="Destuctable High"
 3d_physics/layer_4="Player"
+3d_physics/layer_5="Objects"
