@@ -4,6 +4,7 @@
 [ext_resource type="Resource" uid="uid://ceskskiud2amw" path="res://Scripts/Resources/Matrix/cube.tres" id="2_ks341"]
 [ext_resource type="Material" uid="uid://ddaupb0eij1tu" path="res://Assets/Materials/sludge.tres" id="2_upta4"]
 
+
 [sub_resource type="ImmediateMesh" id="ImmediateMesh_dibuh"]
 
 [sub_resource type="ImmediateMesh" id="ImmediateMesh_mlehr"]
@@ -25,6 +26,7 @@ test_material = ExtResource("2_upta4")
 
 [node name="Points Mesh" type="MeshInstance3D" parent="."]
 visible = false
+
 mesh = SubResource("ImmediateMesh_dibuh")
 
 [node name="Cubes Mesh" type="MeshInstance3D" parent="."]

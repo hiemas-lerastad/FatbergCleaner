@@ -14,8 +14,32 @@ extends CharacterBody3D
 @export_group("Debug")
 @export var collision_test_scene: PackedScene;
 
+var last_interractable_selected: interractable
+
 func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED;
+
+func physics_player_interraction() -> void:
+	if interact_cast.is_colliding() and interact_cast.get_collider() is StaticBody3D and interact_cast.get_collider().name != "Floor": ## if looking at fatberg
+		
+		if(last_interractable_selected != null):
+			last_interractable_selected._on_deselected()
+			last_interractable_selected = null
+		
+		if not carve_indicator.visible == true:
+			carve_indicator.visible = true;
+		carve_indicator.global_position = interact_cast.get_collision_point()
+	elif(interact_cast.get_collider() is interractable): ## if looking at interractable
+		if(last_interractable_selected == null):
+			carve_indicator.visible = false
+			var looking_at: interractable = interact_cast.get_collider()
+			looking_at._on_selected()
+			last_interractable_selected = looking_at
+	else:
+		if(last_interractable_selected != null):
+			last_interractable_selected._on_deselected()
+			last_interractable_selected = null
+		carve_indicator.visible = false;
 
 func _physics_process(delta: float) -> void:
 	if not is_on_floor() and not Globals.debug:
@@ -42,14 +66,8 @@ func _physics_process(delta: float) -> void:
 		velocity.z = move_toward(velocity.z, 0, speed)
 
 	move_and_slide()
-	
-	if interact_cast.is_colliding():
-		if not carve_indicator.visible == true:
-			carve_indicator.visible = true;
-			pass;
-		carve_indicator.global_position = interact_cast.get_collision_point()
-	elif carve_indicator.visible == true:
-		carve_indicator.visible = false;
+
+	physics_player_interraction()
 
 func _input(event):
 	if event is InputEventMouseMotion:
@@ -60,8 +78,11 @@ func _input(event):
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		interact_cast.force_raycast_update()
 		if interact_cast.is_colliding():
-			var collider: StaticBody3D = interact_cast.get_collider()
-			collider.parent.carve_around_point((interact_cast.get_collision_point()), 4.0);		
+			var collider = interact_cast.get_collider()
+			if(collider is StaticBody3D and collider.name != "Floor"):
+				collider.parent.carve_around_point((interact_cast.get_collision_point()), 4.0);
+			elif(collider is interractable):
+				print("HI")
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed and Globals.debug:
 		interact_cast.force_raycast_update()
 		if interact_cast.is_colliding():
