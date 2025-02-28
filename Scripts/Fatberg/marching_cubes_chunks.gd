@@ -29,19 +29,19 @@ extends Node3D;
 	set(value):
 		cutoff = value;
 		#generate();
+		#
+#@export var show_points: bool:
+	#set(value):
+		#show_points = value
+		#if points_node:
+			#points_node.visible = value;
 		
-@export var show_points: bool:
-	set(value):
-		show_points = value
-		if points_node:
-			points_node.visible = value;
-		
-@export var show_grid: bool:
-	set(value):
-		show_grid = value
-		if cubes_node:
-			cubes_node.visible = value;
-		
+#@export var show_grid: bool:
+	#set(value):
+		#show_grid = value
+		#if cubes_node:
+			#cubes_node.visible = value;
+		#
 @export var show_mesh: bool = true:
 	set(value):
 		show_mesh = value
@@ -67,6 +67,7 @@ var cube_mesh: Node;
 var triangle_mesh: Node;
 var matrix: Array3D;
 var chunks: Array3D;
+var adjacencies: Dictionary;
 		
 func _ready() -> void:
 	init_matrix();
@@ -110,13 +111,15 @@ func init_matrix() -> void:
 func _generate() -> void:
 	if not matrix:
 		init_matrix()
+		
+	var vertexes: Array[Dictionary] = [];
 	
 	var matrix_size = size * resolution;
-	var mesh_points = ImmediateMesh.new();
-	mesh_points.surface_begin(Mesh.PRIMITIVE_POINTS);
-	
-	var mesh_cubes: ImmediateMesh = ImmediateMesh.new();
-	mesh_cubes.surface_begin(Mesh.PRIMITIVE_LINES);
+	#var mesh_points = ImmediateMesh.new();
+	#mesh_points.surface_begin(Mesh.PRIMITIVE_POINTS);
+	#
+	#var mesh_cubes: ImmediateMesh = ImmediateMesh.new();
+	#mesh_cubes.surface_begin(Mesh.PRIMITIVE_LINES);
 	
 	var chunk_meshes: Array3D = Array3D.new();
 	chunk_meshes.initialise_size(chunks.x_max, chunks.y_max, chunks.z_max);
@@ -125,6 +128,8 @@ func _generate() -> void:
 	
 	chunk_meshes.fill(null);
 	valid_chunks.fill(null);
+	
+	var first = true;
 	
 	for x in range(0, matrix_size):
 		for y in range(0, matrix_size):
@@ -145,15 +150,15 @@ func _generate() -> void:
 					float(point_value)
 				);
 
-				mesh_points.surface_set_color(point_color);
-				mesh_points.surface_add_vertex(point);
+				#mesh_points.surface_set_color(point_color);
+				#mesh_points.surface_add_vertex(point);
 
 				if x < matrix_size - 1 and y < matrix_size - 1 and z < matrix_size - 1:
 					var cube_vertices: Array[Vector3] = _create_cube_vertices(point);
 					var cube_values: Array[float] = _get_cube_values(matrix, Vector3(int(x), int(y), int(z)));
 
-					if _validate_cube(cube_values):
-						_add_cube_vertices(mesh_cubes, cube_vertices);
+					#if _validate_cube(cube_values):
+						#_add_cube_vertices(mesh_cubes, cube_vertices);
 
 					var lookup_index : int = _get_lookup_index(cube_values);
 
@@ -187,73 +192,129 @@ func _generate() -> void:
 						var vertex1: Vector3 = _interpolate(cube_vertices[a0], cube_values[a0], cube_vertices[b0], cube_values[b0]);
 						var vertex3: Vector3 = _interpolate(cube_vertices[a1], cube_values[a1], cube_vertices[b1], cube_values[b1]);
 						var vertex2: Vector3 = _interpolate(cube_vertices[a2], cube_values[a2], cube_vertices[b2], cube_values[b2]);
-
-						var vector_a: Vector3 = Vector3(
-							vertex3.x - vertex1.x,
-							vertex3.y - vertex1.y,
-							vertex3.z - vertex1.z,
-						)
-
-						var vector_b: Vector3 = Vector3(
-							vertex2.x - vertex1.x,
-							vertex2.y - vertex1.y,
-							vertex2.z - vertex1.z,
-						)
-
-						var vector_normal: Vector3 = Vector3(
-							vector_a.y * vector_b.z - vector_a.z * vector_b.y,
-							vector_a.z * vector_b.x - vector_a.x * vector_b.z,
-							vector_a.x * vector_b.y - vector_a.y * vector_b.x,
-						)
 						
-						var uvs: Array[Vector2] = _get_uvs(vertex1, vertex2, vertex3, vector_normal);
-
-						var chunk_mesh: ImmediateMesh = chunk_meshes.get_value(chunk_index.x, chunk_index.y, chunk_index.z);
-						chunk_mesh.surface_set_color(color);
-						chunk_mesh.surface_set_normal(vector_normal);
-
 						if vertex1 and vertex2 and vertex3:
+							
 							valid_chunks.set_value(chunk_index.x, chunk_index.y, chunk_index.z, true);
-							chunk_mesh.surface_set_uv(uvs[0])
-							chunk_mesh.surface_add_vertex(vertex1);
-							chunk_mesh.surface_set_uv(uvs[1])
-							chunk_mesh.surface_add_vertex(vertex2);
-							chunk_mesh.surface_set_uv(uvs[2])
-							chunk_mesh.surface_add_vertex(vertex3);
-							chunk_meshes.set_value(chunk_index.x, chunk_index.y, chunk_index.z, chunk_mesh);
 
-	mesh_points.surface_end();
-	mesh_cubes.surface_end();
+							var vector_a: Vector3 = Vector3(
+								vertex3.x - vertex1.x,
+								vertex3.y - vertex1.y,
+								vertex3.z - vertex1.z,
+							)
+
+							var vector_b: Vector3 = Vector3(
+								vertex2.x - vertex1.x,
+								vertex2.y - vertex1.y,
+								vertex2.z - vertex1.z,
+							)
+
+							var vector_normal: Vector3 = Vector3(
+								vector_a.y * vector_b.z - vector_a.z * vector_b.y,
+								vector_a.z * vector_b.x - vector_a.x * vector_b.z,
+								vector_a.x * vector_b.y - vector_a.y * vector_b.x,
+							)
+							
+							var uvs: Array[Vector2] = _get_uvs(vertex1, vertex2, vertex3, vector_normal);
+							
+							var vertex1String: String = str(snapped(vertex1.x, 0.01)) + str(snapped(vertex1.y, 0.01)) + str(snapped(vertex1.z, 0.01));
+							vertexes.append({
+								'vertex': vertex1,
+								'uvs': uvs[0],
+								'chunk_index': chunk_index,
+								'string': vertex1String
+							})
+
+							if not adjacencies.has(vertex1String):
+								adjacencies[vertex1String] = [vector_normal];
+							else:
+								adjacencies[vertex1String].append(vector_normal);
+							
+							var vertex2String: String = str(snapped(vertex2.x, 0.01)) + str(snapped(vertex2.y, 0.01)) + str(snapped(vertex2.z, 0.01));
+							vertexes.append({
+								'vertex': vertex2,
+								'uvs': uvs[1],
+								'chunk_index': chunk_index,
+								'string': vertex2String
+							})
+
+							if not adjacencies.has(vertex2String):
+								adjacencies[vertex2String] = [vector_normal];
+							else:
+								adjacencies[vertex2String].append(vector_normal);
+		
+							var vertex3String: String = str(snapped(vertex3.x, 0.01)) + str(snapped(vertex3.y, 0.01)) + str(snapped(vertex3.z, 0.01));
+							vertexes.append({
+								'vertex': vertex3,
+								'uvs': uvs[2],
+								'chunk_index': chunk_index,
+								'string': vertex3String
+							})
+
+							if not adjacencies.has(vertex3String):
+								adjacencies[vertex3String] = [vector_normal];
+							else:
+								adjacencies[vertex3String].append(vector_normal);
+
+							#var chunk_mesh: ImmediateMesh = chunk_meshes.get_value(chunk_index.x, chunk_index.y, chunk_index.z);
+							#chunk_mesh.surface_set_color(color);
+							#chunk_mesh.surface_set_normal(vector_normal);
+						#
+							#valid_chunks.set_value(chunk_index.x, chunk_index.y, chunk_index.z, true);
+							#chunk_mesh.surface_set_uv(uvs[0])
+							#chunk_mesh.surface_add_vertex(vertex1);
+							#chunk_mesh.surface_set_uv(uvs[1])
+							#chunk_mesh.surface_add_vertex(vertex2);
+							#chunk_mesh.surface_set_uv(uvs[2])
+							#chunk_mesh.surface_add_vertex(vertex3);
+							#chunk_meshes.set_value(chunk_index.x, chunk_index.y, chunk_index.z, chunk_mesh);
+
+	for vertex in vertexes:
+		var chunk_mesh: ImmediateMesh = chunk_meshes.get_value(vertex.chunk_index.x, vertex.chunk_index.y, vertex.chunk_index.z);
+		#chunk_mesh.surface_set_normal(vector_normal);
+		
+		var normals: Array = adjacencies[vertex.string];
+		var normal_sum: Vector3 = Vector3(0.0, 0.0, 0.0);
+		for normal in normals:
+			normal_sum += normal;
+
+		chunk_mesh.surface_set_normal(normal_sum.normalized());
+		chunk_mesh.surface_set_uv(vertex.uvs)
+		chunk_mesh.surface_add_vertex(vertex.vertex);
+		chunk_meshes.set_value(vertex.chunk_index.x, vertex.chunk_index.y, vertex.chunk_index.z, chunk_mesh);
+
+	#mesh_points.surface_end();
+	#mesh_cubes.surface_end();
 	
-	var material_points: StandardMaterial3D = StandardMaterial3D.new();
-	material_points.vertex_color_use_as_albedo = true;
-	material_points.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED;
-	material_points.use_point_size = true;
-	material_points.point_size = 8;
-	
-	var material_cubes: StandardMaterial3D = StandardMaterial3D.new();
-	material_cubes.vertex_color_use_as_albedo = true;
-	material_cubes.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED;
+	#var material_points: StandardMaterial3D = StandardMaterial3D.new();
+	#material_points.vertex_color_use_as_albedo = true;
+	#material_points.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED;
+	#material_points.use_point_size = true;
+	#material_points.point_size = 8;
+	#
+	#var material_cubes: StandardMaterial3D = StandardMaterial3D.new();
+	#material_cubes.vertex_color_use_as_albedo = true;
+	#material_cubes.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED;
 	
 	var material_triangles: Material = test_material;
 	#var material_triangles: StandardMaterial3D = StandardMaterial3D.new();
 	#material_triangles.vertex_color_use_as_albedo = true;
 	#material_triangles.next_pass = test_material_2
 	
-	mesh_points.surface_set_material(0, material_points);
-	if points_node:
-		points_node.mesh = mesh_points;
-		points_node.visible = show_points;
-		
-	mesh_cubes.surface_set_material(0, material_cubes);
-	if cubes_node:
-		cubes_node.mesh = mesh_cubes;
-		cubes_node.visible = show_grid;
+	#mesh_points.surface_set_material(0, material_points);
+	#if points_node:
+		#points_node.mesh = mesh_points;
+		#points_node.visible = show_points;
+		#
+	#mesh_cubes.surface_set_material(0, material_cubes);
+	#if cubes_node:
+		#cubes_node.mesh = mesh_cubes;
+		#cubes_node.visible = show_grid;
 
-	else:
-		if triangles_node:
-			triangles_node.visible = false;
-			#collision_node.disabled = true;
+	#else:
+	if triangles_node:
+		triangles_node.visible = false;
+		#collision_node.disabled = true;
 			
 	for index in chunk_meshes.size():
 		var chunk_index: Vector3 = chunk_meshes.get_coord_from_index(index);
@@ -281,11 +342,14 @@ func _generate() -> void:
 
 func _generate_chunks(affected_chunks: Array[Vector3]) -> void:
 	var matrix_size = size * resolution;
+	
+	#var adjacencies: Dictionary;
 
 	for chunk in affected_chunks:
 		var chunk_mesh: ImmediateMesh = ImmediateMesh.new();
 		chunk_mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLES);
 		var valid_chunk: bool = false;
+		var vertexes: Array[Dictionary] = [];
 
 		for x in range(chunk.x * chunk_size, (chunk.x * chunk_size) + chunk_size):
 			for y in range(chunk.y * chunk_size,(chunk.y * chunk_size) + chunk_size):
@@ -321,51 +385,105 @@ func _generate_chunks(affected_chunks: Array[Vector3]) -> void:
 							var vertex1: Vector3 = _interpolate(cube_vertices[a0], cube_values[a0], cube_vertices[b0], cube_values[b0]);
 							var vertex3: Vector3 = _interpolate(cube_vertices[a1], cube_values[a1], cube_vertices[b1], cube_values[b1]);
 							var vertex2: Vector3 = _interpolate(cube_vertices[a2], cube_values[a2], cube_vertices[b2], cube_values[b2]);
-
-							var vector_a: Vector3 = Vector3(
-								vertex3.x - vertex1.x,
-								vertex3.y - vertex1.y,
-								vertex3.z - vertex1.z,
-							)
-
-							var vector_b: Vector3 = Vector3(
-								vertex2.x - vertex1.x,
-								vertex2.y - vertex1.y,
-								vertex2.z - vertex1.z,
-							)
-
-							var vector_normal: Vector3 = Vector3(
-								vector_a.y * vector_b.z - vector_a.z * vector_b.y,
-								vector_a.z * vector_b.x - vector_a.x * vector_b.z,
-								vector_a.x * vector_b.y - vector_a.y * vector_b.x,
-							)
-							
-							var uvs: Array[Vector2] = _get_uvs(vertex1, vertex2, vertex3, vector_normal);
-							
-							var color: Color = Color(
-								float(point.x + size) / float(size * 2), 
-								float(point.y + size) / float(size * 2), 
-								float(point.z + size) / float(size * 2)
-							);
-
-							chunk_mesh.surface_set_color(color);
-							chunk_mesh.surface_set_normal(vector_normal);
-
 							if vertex1 and vertex2 and vertex3:
 								valid_chunk = true;
-								chunk_mesh.surface_set_uv(uvs[0]);
-								chunk_mesh.surface_add_vertex(vertex1);
-								chunk_mesh.surface_set_uv(uvs[1]);
-								chunk_mesh.surface_add_vertex(vertex2);
-								chunk_mesh.surface_set_uv(uvs[2]);
-								chunk_mesh.surface_add_vertex(vertex3);
+								var vector_a: Vector3 = Vector3(
+									vertex3.x - vertex1.x,
+									vertex3.y - vertex1.y,
+									vertex3.z - vertex1.z,
+								)
+
+								var vector_b: Vector3 = Vector3(
+									vertex2.x - vertex1.x,
+									vertex2.y - vertex1.y,
+									vertex2.z - vertex1.z,
+								)
+
+								var vector_normal: Vector3 = Vector3(
+									vector_a.y * vector_b.z - vector_a.z * vector_b.y,
+									vector_a.z * vector_b.x - vector_a.x * vector_b.z,
+									vector_a.x * vector_b.y - vector_a.y * vector_b.x,
+								)
+								
+								var uvs: Array[Vector2] = _get_uvs(vertex1, vertex2, vertex3, vector_normal);
+								
+								var vertex1String: String = str(snapped(vertex1.x, 0.01)) + str(snapped(vertex1.y, 0.01)) + str(snapped(vertex1.z, 0.01));
+								vertexes.append({
+									'vertex': vertex1,
+									'uvs': uvs[0],
+									'chunk_index': chunk,
+									'string': vertex1String
+								})
+
+								if not adjacencies.has(vertex1String):
+									adjacencies[vertex1String] = [vector_normal];
+								else:
+									adjacencies[vertex1String].append(vector_normal);
+								
+								var vertex2String: String = str(snapped(vertex2.x, 0.01)) + str(snapped(vertex2.y, 0.01)) + str(snapped(vertex2.z, 0.01));
+								vertexes.append({
+									'vertex': vertex2,
+									'uvs': uvs[1],
+									'chunk_index': chunk,
+									'string': vertex2String
+								})
+
+								if not adjacencies.has(vertex2String):
+									adjacencies[vertex2String] = [vector_normal];
+								else:
+									adjacencies[vertex2String].append(vector_normal);
+			
+								var vertex3String: String = str(snapped(vertex3.x, 0.01)) + str(snapped(vertex3.y, 0.01)) + str(snapped(vertex3.z, 0.01));
+								vertexes.append({
+									'vertex': vertex3,
+									'uvs': uvs[2],
+									'chunk_index': chunk,
+									'string': vertex3String
+								})
+
+								if not adjacencies.has(vertex3String):
+									adjacencies[vertex3String] = [vector_normal];
+								else:
+									adjacencies[vertex3String].append(vector_normal);
+							
+							#var color: Color = Color(
+								#float(point.x + size) / float(size * 2), 
+								#float(point.y + size) / float(size * 2), 
+								#float(point.z + size) / float(size * 2)
+							#);
+#
+							#chunk_mesh.surface_set_color(color);
+							#chunk_mesh.surface_set_normal(vector_normal);
+#
+							#if vertex1 and vertex2 and vertex3:
+								#valid_chunk = true;
+								#chunk_mesh.surface_set_uv(uvs[0]);
+								#chunk_mesh.surface_add_vertex(vertex1);
+								#chunk_mesh.surface_set_uv(uvs[1]);
+								#chunk_mesh.surface_add_vertex(vertex2);
+								#chunk_mesh.surface_set_uv(uvs[2]);
+								#chunk_mesh.surface_add_vertex(vertex3);
+								
+		for vertex in vertexes:
+			#var chunk_mesh: ImmediateMesh = chunk_meshes.get_value(vertex.chunk_index.x, vertex.chunk_index.y, vertex.chunk_index.z);
+			#chunk_mesh.surface_set_normal(vector_normal);
+
+			var normals: Array = adjacencies[vertex.string];
+			var normal_sum: Vector3 = Vector3(0.0, 0.0, 0.0);
+			for normal in normals:
+				normal_sum += normal;
+
+			chunk_mesh.surface_set_normal(normal_sum.normalized());
+			chunk_mesh.surface_set_uv(vertex.uvs)
+			chunk_mesh.surface_add_vertex(vertex.vertex);
+			#chunk_meshes.set_value(vertex.chunk_index.x, vertex.chunk_index.y, vertex.chunk_index.z, chunk_mesh);
 
 		if valid_chunk:
 			chunk_mesh.surface_end();
 			var new_chunk: Chunk = chunk_scene.instantiate();
 			var material_triangles: Material = test_material;
 			chunk_mesh.surface_set_material(0, material_triangles);
-			#new_chunk.visible = show_mesh;
+			new_chunk.visible = show_mesh;
 			new_chunk.mesh_node.mesh = chunk_mesh;
 			new_chunk.parent = self;
 
