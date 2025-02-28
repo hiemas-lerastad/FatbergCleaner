@@ -38,7 +38,6 @@ func _physics_process(delta):
 		else:
 			''' any other situation i havent thought of'''
 			pass
-		
 
 func _ready():
 	pass

@@ -1,0 +1,25 @@
+[gd_resource type="ShaderMaterial" load_steps=3 format=3 uid="uid://benq3tfpleu8x"]
+
+[ext_resource type="Shader" path="res://Assets/Shaders/wobble_2.gdshader" id="1_57xy3"]
+[ext_resource type="Texture2D" uid="uid://bsjc06v2ayw8j" path="res://Assets/Textures/SludgeAlbedo.jpg" id="2_baavh"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_57xy3")
+shader_parameter/speed = 10.0
+shader_parameter/tangentOffset = 0.44
+shader_parameter/noiseStrength = 1.0
+shader_parameter/displacementStrength = 1.0
+shader_parameter/fractAmount = 1.0
+shader_parameter/albedo = Color(1, 1, 1, 1)
+shader_parameter/roughness = 0.0
+shader_parameter/metallic_texture_channel = null
+shader_parameter/specular = null
+shader_parameter/metallic = null
+shader_parameter/opacity = 1.0
+shader_parameter/uv1_blend_sharpness = 4.737
+shader_parameter/uv1_scale = Vector3(0.5, 0.5, 0.5)
+shader_parameter/uv1_offset = Vector3(1, 1, 1)
+shader_parameter/uv2_scale = Vector3(0, 0, 0)
+shader_parameter/uv2_offset = null
+shader_parameter/texture_albedo = ExtResource("2_baavh")

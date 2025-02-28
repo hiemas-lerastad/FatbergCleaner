@@ -1,4 +1,10 @@
-@tool
+[gd_scene load_steps=7 format=3 uid="uid://dbk7vpoo8tpeh"]
+
+[ext_resource type="Resource" uid="uid://ceskskiud2amw" path="res://Scripts/Resources/Matrix/cube.tres" id="2_7vpax"]
+[ext_resource type="Material" uid="uid://benq3tfpleu8x" path="res://Assets/Materials/sludge_wobble.tres" id="3_vmuy7"]
+
+[sub_resource type="GDScript" id="GDScript_l1pn7"]
+script/source = "@tool
 class_name MarchingCubesInstance;
 extends Node3D;
 
@@ -50,15 +56,15 @@ extends Node3D;
 			
 @export var initial_matrix: Matrix;
 		
-@export_category("Nodes")
+@export_category(\"Nodes\")
 @export var points_node: MeshInstance3D;
 @export var cubes_node: MeshInstance3D;
 @export var triangles_node: MeshInstance3D;
 @export var chunk_container: Node3D;
 
-@export_category("Assets")
+@export_category(\"Assets\")
 @export var texture: CompressedTexture2D;
-@export var chunk_scene: PackedScene = preload("res://Scenes/chunk.tscn");
+@export var chunk_scene: PackedScene = preload(\"res://Scenes/chunk.tscn\");
 @export var test_material: Material;
 @export var test_material_2: Material;
 		
@@ -73,10 +79,10 @@ func _ready() -> void:
 	_generate();
 	
 func _physics_process(delta: float) -> void:
-	if InputMap.has_action("interact_debug_print") and Globals.debug:
-		if Input.is_action_just_pressed("interact_debug_print"):
+	if InputMap.has_action(\"interact_debug_print\") and Globals.debug:
+		if Input.is_action_just_pressed(\"interact_debug_print\"):
 			print('output to matrix.txt')
-			var save_file = FileAccess.open("res://Debug/matrix.txt", FileAccess.WRITE)
+			var save_file = FileAccess.open(\"res://Debug/matrix.txt\", FileAccess.WRITE)
 			save_file.store_line(str(matrix.values))
 
 ## This initialises and fills the matrix object (an Array3D) with its default values
@@ -125,6 +131,8 @@ func _generate() -> void:
 	
 	chunk_meshes.fill(null);
 	valid_chunks.fill(null);
+	
+	var vertexes: Dictionary;
 	
 	for x in range(0, matrix_size):
 		for y in range(0, matrix_size):
@@ -577,3 +585,37 @@ func _get_uvs(vertex_a: Vector3, vertex_b: Vector3, vertex_c: Vector3, normal: V
 		uvs[2] = Vector2(vertex_c.x, vertex_c.z);
 
 	return uvs;
+"
+
+[sub_resource type="ImmediateMesh" id="ImmediateMesh_ln32y"]
+
+[sub_resource type="ImmediateMesh" id="ImmediateMesh_8575r"]
+
+[sub_resource type="ImmediateMesh" id="ImmediateMesh_fnqbl"]
+
+[node name="MarchingCubes" type="Node3D" node_paths=PackedStringArray("points_node", "cubes_node", "triangles_node", "chunk_container")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0483217, -0.0469198, 0.00471306)
+script = SubResource("GDScript_l1pn7")
+size = 6
+chunk_size = 2
+resolution = 10
+initial_matrix = ExtResource("2_7vpax")
+points_node = NodePath("Points Mesh")
+cubes_node = NodePath("Cubes Mesh")
+triangles_node = NodePath("Triangles Mesh")
+chunk_container = NodePath("Chunk Container")
+test_material = ExtResource("3_vmuy7")
+
+[node name="Points Mesh" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("ImmediateMesh_ln32y")
+
+[node name="Cubes Mesh" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("ImmediateMesh_8575r")
+
+[node name="Triangles Mesh" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("ImmediateMesh_fnqbl")
+
+[node name="Chunk Container" type="Node3D" parent="."]

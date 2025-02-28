@@ -79,7 +79,7 @@ func _input(event):
 		interact_cast.force_raycast_update()
 		if interact_cast.is_colliding():
 			var collider = interact_cast.get_collider()
-			if(collider is StaticBody3D and collider.name != "Floor"):
+			if(collider is StaticBody3D and collider.name != "Floor") and collider.parent.carve_around_point:
 				collider.parent.carve_around_point((interact_cast.get_collision_point()), 4.0);
 			elif(collider is interractable):
 				print("HI")

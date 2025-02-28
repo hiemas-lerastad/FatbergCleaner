@@ -2,36 +2,34 @@
 
 [ext_resource type="Script" path="res://Scripts/Fatberg/marching_cubes_chunks.gd" id="1_ft0ih"]
 [ext_resource type="Resource" uid="uid://ceskskiud2amw" path="res://Scripts/Resources/Matrix/cube.tres" id="2_ks341"]
-[ext_resource type="Material" uid="uid://ddaupb0eij1tu" path="res://Assets/Materials/sludge.tres" id="2_upta4"]
+[ext_resource type="Material" uid="uid://benq3tfpleu8x" path="res://Assets/Materials/sludge_wobble.tres" id="3_md2y0"]
 
+[sub_resource type="ImmediateMesh" id="ImmediateMesh_hrp1g"]
 
-[sub_resource type="ImmediateMesh" id="ImmediateMesh_dibuh"]
-
-[sub_resource type="ImmediateMesh" id="ImmediateMesh_mlehr"]
+[sub_resource type="ImmediateMesh" id="ImmediateMesh_dxlln"]
 
 [sub_resource type="ImmediateMesh" id="ImmediateMesh_fnqbl"]
 
 [node name="MarchingCubes" type="Node3D" node_paths=PackedStringArray("points_node", "cubes_node", "triangles_node", "chunk_container")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0483217, -0.0469198, 0.00471306)
 script = ExtResource("1_ft0ih")
-size = 2
+size = 6
 chunk_size = 2
-resolution = 2
+resolution = 10
 initial_matrix = ExtResource("2_ks341")
 points_node = NodePath("Points Mesh")
 cubes_node = NodePath("Cubes Mesh")
 triangles_node = NodePath("Triangles Mesh")
 chunk_container = NodePath("Chunk Container")
-test_material = ExtResource("2_upta4")
+test_material = ExtResource("3_md2y0")
 
 [node name="Points Mesh" type="MeshInstance3D" parent="."]
 visible = false
-
-mesh = SubResource("ImmediateMesh_dibuh")
+mesh = SubResource("ImmediateMesh_hrp1g")
 
 [node name="Cubes Mesh" type="MeshInstance3D" parent="."]
 visible = false
-mesh = SubResource("ImmediateMesh_mlehr")
+mesh = SubResource("ImmediateMesh_dxlln")
 
 [node name="Triangles Mesh" type="MeshInstance3D" parent="."]
 visible = false
