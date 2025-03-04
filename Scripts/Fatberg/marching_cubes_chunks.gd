@@ -67,7 +67,10 @@ var cube_mesh: Node;
 var triangle_mesh: Node;
 var matrix: Array3D;
 var chunks: Array3D;
-var adjacencies: Dictionary;
+
+var cubes: Array3D;
+var _triangles: Array;
+var _vertexes: Array;
 		
 func _ready() -> void:
 	init_matrix();
@@ -92,7 +95,11 @@ func init_matrix() -> void:
 	matrix.initialise_size(matrix_size, matrix_size, matrix_size);
 	chunks = Array3D.new();
 	chunks.initialise_size((size * resolution) / chunk_size, (size * resolution) / chunk_size, (size * resolution) / chunk_size);
-	
+
+	cubes = Array3D.new();
+	cubes.initialise_size(matrix_size - 1, matrix_size - 1, matrix_size - 1);
+	cubes.fill([]);
+
 	if initial_matrix:
 		matrix.values = initial_matrix.values;
 	else:
@@ -111,6 +118,8 @@ func init_matrix() -> void:
 func _generate() -> void:
 	if not matrix:
 		init_matrix()
+		
+	var adjacencies: Dictionary;
 		
 	var vertexes: Array[Dictionary] = [];
 	
@@ -217,49 +226,89 @@ func _generate() -> void:
 							
 							var uvs: Array[Vector2] = _get_uvs(vertex1, vertex2, vertex3, vector_normal);
 							
-							var vertex1String: String = str(snapped(vertex1.x, 0.01)) + str(snapped(vertex1.y, 0.01)) + str(snapped(vertex1.z, 0.01));
-							vertexes.append({
-								'vertex': vertex1,
-								'uvs': uvs[0],
-								'chunk_index': chunk_index,
-								'string': vertex1String
-							})
-
-							if not adjacencies.has(vertex1String):
-								adjacencies[vertex1String] = [vector_normal];
+							# Add to vertex array
+							var index1: int;
+							if not _vertexes.has(vertex1):
+								_vertexes.append(vertex1)
+								index1 = _vertexes.size() - 1;
 							else:
-								adjacencies[vertex1String].append(vector_normal);
+								index1 = _vertexes.find(vertex1);
+								
+							var index2: int;
+							if not _vertexes.has(vertex2):
+								_vertexes.append(vertex2)
+								index2 = _vertexes.size() - 1;
+							else:
+								index2 = _vertexes.find(vertex2);
+								
+							var index3: int;
+							if not _vertexes.has(vertex3):
+								_vertexes.append(vertex3)
+								index3 = _vertexes.size() - 1;
+							else:
+								index3 = _vertexes.find(vertex3);
+								
+							# Add to triangles array
+							var cube_index: int = cubes.get_index_from_coord(x, y, z);
+							if (cube_index < cubes.size()):
+								_triangles.append({
+									'indexes': [index1, index2, index3],
+									'uvs': uvs,
+									'chunk_index': chunk_index,
+									'cube_index': cube_index,
+									'normal': vector_normal
+								})
 							
-							var vertex2String: String = str(snapped(vertex2.x, 0.01)) + str(snapped(vertex2.y, 0.01)) + str(snapped(vertex2.z, 0.01));
-							vertexes.append({
-								'vertex': vertex2,
-								'uvs': uvs[1],
-								'chunk_index': chunk_index,
-								'string': vertex2String
-							})
-
-							if not adjacencies.has(vertex2String):
-								adjacencies[vertex2String] = [vector_normal];
-							else:
-								adjacencies[vertex2String].append(vector_normal);
-		
-							var vertex3String: String = str(snapped(vertex3.x, 0.01)) + str(snapped(vertex3.y, 0.01)) + str(snapped(vertex3.z, 0.01));
-							vertexes.append({
-								'vertex': vertex3,
-								'uvs': uvs[2],
-								'chunk_index': chunk_index,
-								'string': vertex3String
-							})
-
-							if not adjacencies.has(vertex3String):
-								adjacencies[vertex3String] = [vector_normal];
-							else:
-								adjacencies[vertex3String].append(vector_normal);
+								# Add to cubes matrix
+								var cube_value = cubes.get_value(x, y, z);
+								cube_value.append(_triangles.size() - 1);
+								cubes.set_value(x, y, z, cube_value);
+								
+							
+							#
+							#var vertex1String: String = str(snapped(vertex1.x, 0.01)) + str(snapped(vertex1.y, 0.01)) + str(snapped(vertex1.z, 0.01));
+							#vertexes.append({
+								#'vertex': vertex1,
+								#'uvs': uvs[0],
+								#'chunk_index': chunk_index,
+								#'string': vertex1String
+							#})
+#
+							#if not adjacencies.has(vertex1String):
+								#adjacencies[vertex1String] = [vector_normal];
+							#else:
+								#adjacencies[vertex1String].append(vector_normal);
+							#
+							#var vertex2String: String = str(snapped(vertex2.x, 0.01)) + str(snapped(vertex2.y, 0.01)) + str(snapped(vertex2.z, 0.01));
+							#vertexes.append({
+								#'vertex': vertex2,
+								#'uvs': uvs[1],
+								#'chunk_index': chunk_index,
+								#'string': vertex2String
+							#})
+#
+							#if not adjacencies.has(vertex2String):
+								#adjacencies[vertex2String] = [vector_normal];
+							#else:
+								#adjacencies[vertex2String].append(vector_normal);
+		#
+							#var vertex3String: String = str(snapped(vertex3.x, 0.01)) + str(snapped(vertex3.y, 0.01)) + str(snapped(vertex3.z, 0.01));
+							#vertexes.append({
+								#'vertex': vertex3,
+								#'uvs': uvs[2],
+								#'chunk_index': chunk_index,
+								#'string': vertex3String
+							#})
+#
+							#if not adjacencies.has(vertex3String):
+								#adjacencies[vertex3String] = [vector_normal];
+							#else:
+								#adjacencies[vertex3String].append(vector_normal);
 
 							#var chunk_mesh: ImmediateMesh = chunk_meshes.get_value(chunk_index.x, chunk_index.y, chunk_index.z);
 							#chunk_mesh.surface_set_color(color);
 							#chunk_mesh.surface_set_normal(vector_normal);
-						#
+
 							#valid_chunks.set_value(chunk_index.x, chunk_index.y, chunk_index.z, true);
 							#chunk_mesh.surface_set_uv(uvs[0])
 							#chunk_mesh.surface_add_vertex(vertex1);
@@ -269,19 +318,30 @@ func _generate() -> void:
 							#chunk_mesh.surface_add_vertex(vertex3);
 							#chunk_meshes.set_value(chunk_index.x, chunk_index.y, chunk_index.z, chunk_mesh);
 
-	for vertex in vertexes:
-		var chunk_mesh: ImmediateMesh = chunk_meshes.get_value(vertex.chunk_index.x, vertex.chunk_index.y, vertex.chunk_index.z);
-		#chunk_mesh.surface_set_normal(vector_normal);
+	for triangle in _triangles:
+		var chunk_mesh: ImmediateMesh = chunk_meshes.get_value(triangle.chunk_index.x, triangle.chunk_index.y, triangle.chunk_index.z);
+		var normals: Array[Vector3] = _calculate_normals(triangle);
 		
-		var normals: Array = adjacencies[vertex.string];
-		var normal_sum: Vector3 = Vector3(0.0, 0.0, 0.0);
-		for normal in normals:
-			normal_sum += normal;
-
-		chunk_mesh.surface_set_normal(normal_sum.normalized());
-		chunk_mesh.surface_set_uv(vertex.uvs)
-		chunk_mesh.surface_add_vertex(vertex.vertex);
-		chunk_meshes.set_value(vertex.chunk_index.x, vertex.chunk_index.y, vertex.chunk_index.z, chunk_mesh);
+		for index in range(0, triangle.indexes.size() - 1):
+			var vertex_index: int = triangle.indexes[index];
+			var vertex: Vector3 = _vertexes[vertex_index];
+			chunk_mesh.surface_set_normal(normals[index]);
+			chunk_mesh.surface_set_uv(triangle.uvs[index])
+			chunk_mesh.surface_add_vertex(vertex);
+			chunk_meshes.set_value(triangle.chunk_index.x, triangle.chunk_index.y, triangle.chunk_index.z, chunk_mesh);
+	#for vertex in vertexes:
+		#var chunk_mesh: ImmediateMesh = chunk_meshes.get_value(vertex.chunk_index.x, vertex.chunk_index.y, vertex.chunk_index.z);
+		##chunk_mesh.surface_set_normal(vector_normal);
+		#
+		#var normals: Array = adjacencies[vertex.string];
+		#var normal_sum: Vector3 = Vector3(0.0, 0.0, 0.0);
+		#for normal in normals:
+			#normal_sum += normal;
+#
+		#chunk_mesh.surface_set_normal(normal_sum.normalized());
+		#chunk_mesh.surface_set_uv(vertex.uvs)
+		#chunk_mesh.surface_add_vertex(vertex.vertex);
+		#chunk_meshes.set_value(vertex.chunk_index.x, vertex.chunk_index.y, vertex.chunk_index.z, chunk_mesh);
 
 	#mesh_points.surface_end();
 	#mesh_cubes.surface_end();
@@ -343,7 +403,7 @@ func _generate() -> void:
 func _generate_chunks(affected_chunks: Array[Vector3]) -> void:
 	var matrix_size = size * resolution;
 	
-	#var adjacencies: Dictionary;
+	var adjacencies: Dictionary;
 
 	for chunk in affected_chunks:
 		var chunk_mesh: ImmediateMesh = ImmediateMesh.new();
@@ -577,9 +637,9 @@ func _get_lookup_index(cube_values: Array[float]) -> int:
 func _interpolate(vertex1: Vector3, value1: float, vertex2: Vector3, value2: float) -> Vector3:
 	var t: float = (cutoff - value1) / (value2 - value1);
 	return Vector3(
-		vertex1.x + t * (vertex2.x - vertex1.x),
-		vertex1.y + t * (vertex2.y - vertex1.y),
-		vertex1.z + t * (vertex2.z - vertex1.z)
+		snapped(vertex1.x + t * (vertex2.x - vertex1.x), 0.0001),
+		snapped(vertex1.y + t * (vertex2.y - vertex1.y), 0.0001),
+		snapped(vertex1.z + t * (vertex2.z - vertex1.z), 0.0001)
 	)
 
 func _get_triangle_normal(a, b, c):
@@ -695,3 +755,22 @@ func _get_uvs(vertex_a: Vector3, vertex_b: Vector3, vertex_c: Vector3, normal: V
 		uvs[2] = Vector2(vertex_c.x, vertex_c.z);
 
 	return uvs;
+	
+func _calculate_normals(triangle: Dictionary) -> Array[Vector3]:
+	var triangle_list: Array = [];
+	var normals: Array[Vector3] = [];
+	var cube_coords: Vector3 = cubes.get_coord_from_index(triangle.cube_index);
+	for x in range(-1, 1):
+		for y in range(-1, 1):
+			for z in range(-1, 1):
+				var cube_value: Array = cubes.get_value(cube_coords.x + x, cube_coords.y + y, cube_coords.z + z);
+				triangle_list.append_array(cube_value)
+
+	for index in triangle.indexes:
+		var vertex: Vector3 = _vertexes[index];
+		var normal_sum: Vector3 = Vector3(0, 0, 0);
+		for item in triangle_list:
+			if _triangles[item].has(vertex):
+				normal_sum += item.normal
+		normals.append(normal_sum.normalized());
+	return normals;

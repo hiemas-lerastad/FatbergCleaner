@@ -1,10 +1,9 @@
-[gd_scene load_steps=13 format=3 uid="uid://baffxghij0727"]
+[gd_scene load_steps=12 format=3 uid="uid://baffxghij0727"]
 
 [ext_resource type="Script" path="res://Scripts/Test/main.gd" id="2_mbvjg"]
 [ext_resource type="PackedScene" uid="uid://dcngr1fm4k043" path="res://Scenes/Interractables/collectable.tscn" id="3_figyp"]
 [ext_resource type="PackedScene" uid="uid://dpsi06xinqbpn" path="res://Scenes/Player.tscn" id="3_hf4c8"]
 [ext_resource type="PackedScene" uid="uid://brbkfaajf5qdy" path="res://Scenes/marching_cubes_chunks.tscn" id="3_rssgk"]
-[ext_resource type="Resource" uid="uid://c16vmgdpln5y0" path="res://Scripts/Resources/Matrix/blob_1.tres" id="4_8ahc5"]
 [ext_resource type="Material" uid="uid://benq3tfpleu8x" path="res://Assets/Materials/sludge_wobble.tres" id="6_8gd2f"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ba63i"]
@@ -68,5 +67,5 @@ mesh = SubResource("PlaneMesh_87i16")
 
 [node name="Fatberg1" parent="." instance=ExtResource("3_rssgk")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.26369, -0.0469198, 2.49573)
-initial_matrix = ExtResource("4_8ahc5")
+initial_matrix = null
 test_material = ExtResource("6_8gd2f")

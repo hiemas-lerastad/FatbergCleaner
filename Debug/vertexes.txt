@@ -1,0 +1,17 @@
+TODO
+ - Re-work vertex data structure in order to caluculate normals
+
+
+data structure
+- cubes array
+	- triangle indexes
+
+- triangles array
+	- vertex indexes
+	- normal
+	
+- vertex array
+	
+for vertex, get cube index, and adjacent cube indexes (can limit to bordering side)
+- check if triangles contain vertex
+	- if they do get triangle normals and average them
