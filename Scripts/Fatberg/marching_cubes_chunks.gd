@@ -217,12 +217,13 @@ func _generate() -> void:
 							
 							var uvs: Array[Vector2] = _get_uvs(vertex1, vertex2, vertex3, vector_normal);
 							
-							var vertex1String: String = str(snapped(vertex1.x, 0.01)) + str(snapped(vertex1.y, 0.01)) + str(snapped(vertex1.z, 0.01));
+							var vertex1String: String = str(snapped(vertex1.x, 0.001)) + str(snapped(vertex1.y, 0.001)) + str(snapped(vertex1.z, 0.001));
 							vertexes.append({
 								'vertex': vertex1,
 								'uvs': uvs[0],
 								'chunk_index': chunk_index,
-								'string': vertex1String
+								'string': vertex1String,
+								'face_normal': vector_normal
 							})
 
 							if not adjacencies.has(vertex1String):
@@ -230,12 +231,13 @@ func _generate() -> void:
 							else:
 								adjacencies[vertex1String].append(vector_normal);
 							
-							var vertex2String: String = str(snapped(vertex2.x, 0.01)) + str(snapped(vertex2.y, 0.01)) + str(snapped(vertex2.z, 0.01));
+							var vertex2String: String = str(snapped(vertex2.x, 0.001)) + str(snapped(vertex2.y, 0.001)) + str(snapped(vertex2.z, 0.001));
 							vertexes.append({
 								'vertex': vertex2,
 								'uvs': uvs[1],
 								'chunk_index': chunk_index,
-								'string': vertex2String
+								'string': vertex2String,
+								'face_normal': vector_normal
 							})
 
 							if not adjacencies.has(vertex2String):
@@ -243,12 +245,13 @@ func _generate() -> void:
 							else:
 								adjacencies[vertex2String].append(vector_normal);
 		
-							var vertex3String: String = str(snapped(vertex3.x, 0.01)) + str(snapped(vertex3.y, 0.01)) + str(snapped(vertex3.z, 0.01));
+							var vertex3String: String = str(snapped(vertex3.x, 0.001)) + str(snapped(vertex3.y, 0.001)) + str(snapped(vertex3.z, 0.001));
 							vertexes.append({
 								'vertex': vertex3,
 								'uvs': uvs[2],
 								'chunk_index': chunk_index,
-								'string': vertex3String
+								'string': vertex3String,
+								'face_normal': vector_normal
 							})
 
 							if not adjacencies.has(vertex3String):
@@ -269,7 +272,9 @@ func _generate() -> void:
 							#chunk_mesh.surface_add_vertex(vertex3);
 							#chunk_meshes.set_value(chunk_index.x, chunk_index.y, chunk_index.z, chunk_mesh);
 
-	for vertex in vertexes:
+	#for vertex in vertexes:
+	for index in range(vertexes.size()):
+		var vertex: Dictionary = vertexes[index];
 		var chunk_mesh: ImmediateMesh = chunk_meshes.get_value(vertex.chunk_index.x, vertex.chunk_index.y, vertex.chunk_index.z);
 		#chunk_mesh.surface_set_normal(vector_normal);
 		
@@ -277,11 +282,17 @@ func _generate() -> void:
 		var normal_sum: Vector3 = Vector3(0.0, 0.0, 0.0);
 		for normal in normals:
 			normal_sum += normal;
-
+		
 		chunk_mesh.surface_set_normal(normal_sum.normalized());
 		chunk_mesh.surface_set_uv(vertex.uvs)
 		chunk_mesh.surface_add_vertex(vertex.vertex);
 		chunk_meshes.set_value(vertex.chunk_index.x, vertex.chunk_index.y, vertex.chunk_index.z, chunk_mesh);
+		
+		var chunk: Chunk = chunks.get_value(vertex.chunk_index.x, vertex.chunk_index.y, vertex.chunk_index.z);
+		if not chunk:
+			chunk = chunk_scene.instantiate();
+		chunk.vertices.append(vertex);
+		chunks.set_value(vertex.chunk_index.x, vertex.chunk_index.y, vertex.chunk_index.z, chunk);
 
 	#mesh_points.surface_end();
 	#mesh_cubes.surface_end();
@@ -324,7 +335,8 @@ func _generate() -> void:
 			
 			chunk_mesh.surface_set_material(0, material_triangles);
 
-			var chunk: Chunk = chunk_scene.instantiate();
+			#var chunk: Chunk = chunk_scene.instantiate();
+			var chunk: Chunk = chunks.get_value(chunk_index.x, chunk_index.y, chunk_index.z);
 			
 			chunk.visible = show_mesh;
 			chunk.mesh_node.mesh = chunk_mesh;
@@ -344,12 +356,22 @@ func _generate_chunks(affected_chunks: Array[Vector3]) -> void:
 	var matrix_size = size * resolution;
 	
 	#var adjacencies: Dictionary;
+	
+	## HERERERERE
+	# Update to add normals once all vertexes have been calcculated, the same as generate function 
+	var chunk_meshes: Array3D = Array3D.new();
+	chunk_meshes.initialise_size(chunks.x_max, chunks.y_max, chunks.z_max);
+	var valid_chunks: Array3D = Array3D.new();
+	valid_chunks.initialise_size(chunks.x_max, chunks.y_max, chunks.z_max);
+	
+	var vertexes: Array[Dictionary] = [];
+	
+	chunk_meshes.fill(null);
+	valid_chunks.fill(null);
 
 	for chunk in affected_chunks:
 		var chunk_mesh: ImmediateMesh = ImmediateMesh.new();
 		chunk_mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLES);
-		var valid_chunk: bool = false;
-		var vertexes: Array[Dictionary] = [];
 
 		for x in range(chunk.x * chunk_size, (chunk.x * chunk_size) + chunk_size):
 			for y in range(chunk.y * chunk_size,(chunk.y * chunk_size) + chunk_size):
@@ -386,7 +408,8 @@ func _generate_chunks(affected_chunks: Array[Vector3]) -> void:
 							var vertex3: Vector3 = _interpolate(cube_vertices[a1], cube_values[a1], cube_vertices[b1], cube_values[b1]);
 							var vertex2: Vector3 = _interpolate(cube_vertices[a2], cube_values[a2], cube_vertices[b2], cube_values[b2]);
 							if vertex1 and vertex2 and vertex3:
-								valid_chunk = true;
+								chunk_meshes.set_value(chunk.x, chunk.y, chunk.z, chunk_mesh);
+								valid_chunks.set_value(chunk.x, chunk.y, chunk.z, true);
 								var vector_a: Vector3 = Vector3(
 									vertex3.x - vertex1.x,
 									vertex3.y - vertex1.y,
@@ -407,12 +430,13 @@ func _generate_chunks(affected_chunks: Array[Vector3]) -> void:
 								
 								var uvs: Array[Vector2] = _get_uvs(vertex1, vertex2, vertex3, vector_normal);
 								
-								var vertex1String: String = str(snapped(vertex1.x, 0.01)) + str(snapped(vertex1.y, 0.01)) + str(snapped(vertex1.z, 0.01));
+								var vertex1String: String = str(snapped(vertex1.x, 0.001)) + str(snapped(vertex1.y, 0.001)) + str(snapped(vertex1.z, 0.001));
 								vertexes.append({
 									'vertex': vertex1,
 									'uvs': uvs[0],
 									'chunk_index': chunk,
-									'string': vertex1String
+									'string': vertex1String,
+									'face_normal': vector_normal
 								})
 
 								if not adjacencies.has(vertex1String):
@@ -420,12 +444,13 @@ func _generate_chunks(affected_chunks: Array[Vector3]) -> void:
 								else:
 									adjacencies[vertex1String].append(vector_normal);
 								
-								var vertex2String: String = str(snapped(vertex2.x, 0.01)) + str(snapped(vertex2.y, 0.01)) + str(snapped(vertex2.z, 0.01));
+								var vertex2String: String = str(snapped(vertex2.x, 0.001)) + str(snapped(vertex2.y, 0.001)) + str(snapped(vertex2.z, 0.001));
 								vertexes.append({
 									'vertex': vertex2,
 									'uvs': uvs[1],
 									'chunk_index': chunk,
-									'string': vertex2String
+									'string': vertex2String,
+									'face_normal': vector_normal
 								})
 
 								if not adjacencies.has(vertex2String):
@@ -433,12 +458,13 @@ func _generate_chunks(affected_chunks: Array[Vector3]) -> void:
 								else:
 									adjacencies[vertex2String].append(vector_normal);
 			
-								var vertex3String: String = str(snapped(vertex3.x, 0.01)) + str(snapped(vertex3.y, 0.01)) + str(snapped(vertex3.z, 0.01));
+								var vertex3String: String = str(snapped(vertex3.x, 0.001)) + str(snapped(vertex3.y, 0.001)) + str(snapped(vertex3.z, 0.001));
 								vertexes.append({
 									'vertex': vertex3,
 									'uvs': uvs[2],
 									'chunk_index': chunk,
-									'string': vertex3String
+									'string': vertex3String,
+									'face_normal': vector_normal
 								})
 
 								if not adjacencies.has(vertex3String):
@@ -463,36 +489,84 @@ func _generate_chunks(affected_chunks: Array[Vector3]) -> void:
 								#chunk_mesh.surface_add_vertex(vertex2);
 								#chunk_mesh.surface_set_uv(uvs[2]);
 								#chunk_mesh.surface_add_vertex(vertex3);
-								
-		for vertex in vertexes:
-			#var chunk_mesh: ImmediateMesh = chunk_meshes.get_value(vertex.chunk_index.x, vertex.chunk_index.y, vertex.chunk_index.z);
+		#for vertex in vertexes:
+	for index in range(vertexes.size()):
+		var vertex: Dictionary = vertexes[index];
+		var chunk_mesh: ImmediateMesh = chunk_meshes.get_value(vertex.chunk_index.x, vertex.chunk_index.y, vertex.chunk_index.z);
+		if valid_chunks.get_value(vertex.chunk_index.x, vertex.chunk_index.y, vertex.chunk_index.z) and chunk_mesh:
 			#chunk_mesh.surface_set_normal(vector_normal);
-
+			
 			var normals: Array = adjacencies[vertex.string];
 			var normal_sum: Vector3 = Vector3(0.0, 0.0, 0.0);
 			for normal in normals:
 				normal_sum += normal;
-
+			
 			chunk_mesh.surface_set_normal(normal_sum.normalized());
 			chunk_mesh.surface_set_uv(vertex.uvs)
 			chunk_mesh.surface_add_vertex(vertex.vertex);
-			#chunk_meshes.set_value(vertex.chunk_index.x, vertex.chunk_index.y, vertex.chunk_index.z, chunk_mesh);
+			chunk_meshes.set_value(vertex.chunk_index.x, vertex.chunk_index.y, vertex.chunk_index.z, chunk_mesh);
+			
+			var new_chunk: Chunk = chunks.get_value(vertex.chunk_index.x, vertex.chunk_index.y, vertex.chunk_index.z);
+			if not new_chunk:
+				new_chunk = chunk_scene.instantiate();
+			new_chunk.vertices.append(vertex);
+			chunks.set_value(vertex.chunk_index.x, vertex.chunk_index.y, vertex.chunk_index.z, new_chunk);
+	#
+	#for vertex in vertexes:
+		##var chunk_mesh: ImmediateMesh = chunk_meshes.get_value(vertex.chunk_index.x, vertex.chunk_index.y, vertex.chunk_index.z);
+		##chunk_mesh.surface_set_normal(vector_normal);
+#
+		#var normals: Array = adjacencies[vertex.string];
+		#var normal_sum: Vector3 = Vector3(0.0, 0.0, 0.0);
+		#for normal in normals:
+			#normal_sum += normal;
+#
+		#chunk_mesh.surface_set_normal(normal_sum.normalized());
+		#chunk_mesh.surface_set_uv(vertex.uvs)
+		#chunk_mesh.surface_add_vertex(vertex.vertex);
+		##chunk_meshes.set_value(vertex.chunk_index.x, vertex.chunk_index.y, vertex.chunk_index.z, chunk_mesh);
 
-		if valid_chunk:
+	for index in chunk_meshes.size():
+		var chunk_index: Vector3 = chunk_meshes.get_coord_from_index(index);
+		var chunk_mesh: ImmediateMesh = chunk_meshes.get_value(chunk_index.x, chunk_index.y, chunk_index.z);
+		if valid_chunks.get_value(chunk_index.x, chunk_index.y, chunk_index.z) and chunk_mesh:
 			chunk_mesh.surface_end();
-			var new_chunk: Chunk = chunk_scene.instantiate();
 			var material_triangles: Material = test_material;
 			chunk_mesh.surface_set_material(0, material_triangles);
-			new_chunk.visible = show_mesh;
-			new_chunk.mesh_node.mesh = chunk_mesh;
-			new_chunk.parent = self;
 
+			#var chunk: Chunk = chunk_scene.instantiate();
+			var chunk: Chunk = chunks.get_value(chunk_index.x, chunk_index.y, chunk_index.z);
+			
+			chunk.visible = show_mesh;
+			chunk.mesh_node.mesh = chunk_mesh;
+			#chunk.shell_mesh_node.mesh = chunk_mesh;
+			#chunk.shell_mesh_node.position = chunk.mesh_node.position * 0.5;
+
+			chunk.parent = self;
 			var collision_shape: ConvexPolygonShape3D = chunk_mesh.create_convex_shape();
 			if collision_shape:
-				new_chunk.low_collision.set_shape(collision_shape);
+				chunk.low_collision.set_shape(collision_shape);
+				
+				chunks.set_value(chunk_index.x, chunk_index.y, chunk_index.z, chunk);
+				
+				chunk_container.add_child(chunk)
 
-				chunk_container.add_child(new_chunk);
-				chunks.set_value(chunk.x, chunk.y, chunk.z, new_chunk);
+		#if valid_chunk:
+			#chunk_mesh.surface_end();
+			#var new_chunk: Chunk = chunks.get_value(chunk.x, chunk.y, chunk.z);
+			##ImmediateMesh = chunks.get_value(chunk_index.x, chunk_index.y, chunk_index.z);
+			#var material_triangles: Material = test_material;
+			#chunk_mesh.surface_set_material(0, material_triangles);
+			#new_chunk.visible = show_mesh;
+			#new_chunk.mesh_node.mesh = chunk_mesh;
+			#new_chunk.parent = self;
+#
+			#var collision_shape: ConvexPolygonShape3D = chunk_mesh.create_convex_shape();
+			#if collision_shape:
+				#new_chunk.low_collision.set_shape(collision_shape);
+#
+				#chunk_container.add_child(new_chunk);
+				#chunks.set_value(chunk.x, chunk.y, chunk.z, new_chunk);
 
 func _create_cube_vertices(point_position: Vector3) -> Array[Vector3]:
 	var offset: float = 1.0 / float(resolution)
@@ -577,9 +651,9 @@ func _get_lookup_index(cube_values: Array[float]) -> int:
 func _interpolate(vertex1: Vector3, value1: float, vertex2: Vector3, value2: float) -> Vector3:
 	var t: float = (cutoff - value1) / (value2 - value1);
 	return Vector3(
-		vertex1.x + t * (vertex2.x - vertex1.x),
-		vertex1.y + t * (vertex2.y - vertex1.y),
-		vertex1.z + t * (vertex2.z - vertex1.z)
+		snapped(vertex1.x + t * (vertex2.x - vertex1.x), 0.001),
+		snapped(vertex1.y + t * (vertex2.y - vertex1.y), 0.001),
+		snapped(vertex1.z + t * (vertex2.z - vertex1.z), 0.001)
 	)
 
 func _get_triangle_normal(a, b, c):
@@ -613,6 +687,9 @@ func carve_around_point(global_point: Vector3, radius: float) -> void:
 
 	for chunk in affected_chunks:
 		if chunks.get_value(chunk.x, chunk.y, chunk.z):
+			var affected_vertices: Array[Dictionary] = chunks.get_value(chunk.x, chunk.y, chunk.z).vertices;
+			for vertex in affected_vertices:
+				adjacencies[vertex.string].pop_at(adjacencies[vertex.string].find(vertex.face_normal));
 			chunks.get_value(chunk.x, chunk.y, chunk.z).queue_free()
 			chunks.set_value(chunk.x, chunk.y, chunk.z, null);
 
